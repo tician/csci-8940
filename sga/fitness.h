@@ -5,7 +5,7 @@
 #include "TendencyMatrix10x25.h"
 
 
-__float128 fitness(uint32_t diagnosis)
+__float128 fitness(uint32_t diagnosis, uint32_t symptoms)
 {
 	__float128 L1 = 1.0;
 	__float128 L2 = 1.0;
@@ -14,7 +14,7 @@ __float128 fitness(uint32_t diagnosis)
 // Positive Likelihood
 	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
 	{
-		if (symptoms_&(1<<iter))
+		if (symptoms&(1<<iter))
 		{
 			__float128 temp = 1.0
 			for (jter=0; jter<NUMBER_DISEASES; jter++)
@@ -36,7 +36,7 @@ __float128 fitness(uint32_t diagnosis)
 			__float128 temp = 1.0;
 			for (jter=0; jter<NUMBER_SYMPTOMS; jter++)
 			{
-				if (!(symptoms_&(1<<jter)))
+				if (!(symptoms&(1<<jter)))
 				{
 					temp *= (1-qManifestationInDisease[iter]
 				}
