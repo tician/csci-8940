@@ -2,8 +2,11 @@
  * I was really fucking bored and depressed...
  */
 
+#include <stdint.h>
 #include "TendencyMatrix10x25.h"
 
+#define ZERO_FITNESS_LIMIT			1.0e-5
+__float128 qPriorLikelihood[(1<<NUMBER_DISEASES)] = {};
 
 __float128 fitness(uint32_t diagnosis, uint32_t symptoms)
 {
@@ -16,7 +19,7 @@ __float128 fitness(uint32_t diagnosis, uint32_t symptoms)
 	{
 		if (symptoms&(1<<iter))
 		{
-			__float128 temp = 1.0
+			__float128 temp = 1.0;
 			for (jter=0; jter<NUMBER_DISEASES; jter++)
 			{
 				if (diagnosis&(1<<jter))
@@ -24,7 +27,8 @@ __float128 fitness(uint32_t diagnosis, uint32_t symptoms)
 					temp *= (1-qManifestationInDisease[iter][jter]);
 				}
 			}
-			L1 *= (1-temp);
+			__float128 temp2 = 1.0;
+			L1 *= (temp2-temp);
 		}
 	}
 
@@ -38,18 +42,15 @@ __float128 fitness(uint32_t diagnosis, uint32_t symptoms)
 			{
 				if (!(symptoms&(1<<jter)))
 				{
-					temp *= (1-qManifestationInDisease[iter]
+					__float128 temp2 = 1.0;
+					temp *= (temp2-qManifestationInDisease[jter][iter]);
 				}
 			}
 			L2 *= (temp);
 		}
 	}
-	__float128 modifedfitness = L1 * L2 * qPriorLikelihood[diagnosis];
-	return modifiedfitness;
+	return (L1 * L2 * qPriorLikelihood[diagnosis]);
 }
-
-
-__float128 qPriorLikelihood[(1<<NUMBER_DISEASES)] = {};
 
 void priorLikelihoodSetup(void)
 {
@@ -66,8 +67,6 @@ void priorLikelihoodSetup(void)
 		}
 	}
 }
-
-#define ZERO_FITNESS_LIMIT			1.0e-5
 
 void tendencyFix(void)
 {
