@@ -21,7 +21,7 @@ qOptimumDiagnoses = ExhaustiveResults10x25;
 qManifestationInDisease = tendencyFix(qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS, ZERO_FITNESS_LIMIT);
 
 % Only need to calculate prior likelihood once
-qPriorLikelihood = priorLikelihoodSetup(genes,qPriorProbability)
+qPriorLikelihood = priorLikelihoodSetup(NUMBER_DISEASES,qPriorProbability)
 
 
 
@@ -30,6 +30,7 @@ GENERATION_LIMIT = 50;
 POPULATION_LIMIT = 200;
 
 MUTATION_RATE = 0.003;
+CROSSOVER_RATE = 0.1;
 CROSSOVER_POINTS = 1;
 
 
@@ -145,13 +146,73 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 			% End of best fitness updates
 
 			% Breed next generation
-			for individual=1:1:POPULATION_LIMIT
-				ma = 
-				da = 
+			for individual=1:1:uint32(POPULATION_LIMIT/2)
+
+				temp = rand()*sig_fit(POPULATION_LIMIT);
+
+				% Bisecting search for parent
+				seeker = uint32(POPULATION_LIMIT/2);
+				for iter=1:1:POPULATION_LIMIT
+					if temp <= sig_fit(seeker)
+						if temp > sig_fit(seeker-1)
+							ma = seeker;
+							break;
+						else
+							seeker = uint32(seeker/2);
+						end
+					else
+						if temp <= sig_fit(seeker+1)
+							ma = seeker+1;
+							break;
+						else
+							seeker = uint32(seeker + (seeker/2));
+						end
+					end
+				end
+
+				temp = rand()*sig_fit(POPULATION_LIMIT);
+
+				% Bisecting search for parent
+				seeker = uint32(POPULATION_LIMIT/2);
+				for iter=1:1:POPULATION_LIMIT
+					if temp <= sig_fit(seeker)
+						if temp > sig_fit(seeker-1)
+							pa = seeker;
+							break;
+						else
+							seeker = uint32(seeker/2);
+						end
+					else
+						if temp <= sig_fit(seeker+1)
+							pa = seeker+1;
+							break;
+						else
+							seeker = uint32(seeker + (seeker/2));
+						end
+					end
+				end
+
+				% Crossover
+				[ba,by] = splicer(ma,pa,CROSSOVER_RATE,CROSSOVER_POINTS,NUMBER_DISEASES);
+				
+				population(((iter-1)*2)+1,:) = ba;
+				population(((iter-1)*2)+2,:) = by;
 			end
 			% End of breeding
 
-
+			% Mutate children
+			for iter=1:1:POPULATION_LIMIT
+				for jter=1:1:NUMBER_DISEASES
+					if mutagen(MUTATION_RATE)
+						if population(iter,jter) > 0
+							population(iter,jter) = 0;
+						else
+							population(iter,jter) = 1;
+						end
+					end
+				end
+			end
+			% End of mutation
 		end
 		% End of Generation
 	end
