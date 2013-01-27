@@ -1,9 +1,11 @@
-% Was using bitmask for diagnoses and symptoms because of memory efficiency,
-%  but 1) octave makes arrays very easy, 2) using integer arrays should allow
-%  code reuse, 3) the problem is no where near approaching the memory limit of
-%  my netbook, and 4) I'm not sure how great the processing advantage is for
-%  using bitwise operations instead of integer arrays (lower need to pull data
-%  from RAM instead of CPU cache).
+%{
+  Was using bitmask for diagnoses and symptoms because of memory efficiency,
+  but 1) octave makes arrays very easy, 2) using integer arrays should allow
+  code reuse, 3) the problem is no where near approaching the memory limit of
+  my netbook, and 4) I'm not sure how great the processing advantage is for
+  using bitwise operations instead of integer arrays (lower need to pull data
+  from RAM instead of CPU cache).
+%}
 
 clear all;
 %format long;
@@ -119,10 +121,17 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 					third_f = second_f;
 					second_f = first_f;
 					first_f = sin_fit(individual);
-					
 					third_g = second_g;
 					second_g = first_g;
 					first_g = generation;
+				else if sin_fit(individual) > second_f
+					third_f = second_f;
+					second_f = sin_fit(individual);
+					third_g = second_g;
+					second_g = generation;
+				else if sin_fit(individual) > third_f
+					third_f = sin_fit(individual);
+					third_g = generation;
 				end
 			end
 			% End of fitness evaluations
@@ -156,21 +165,36 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 				temp = rand()*sig_fit(POPULATION_LIMIT);
 
 				% Bisecting search for parent
-				seeker = uint32(POPULATION_LIMIT/2);
+				seeker_left = 1;
+				seeker_right = POPULATION_LIMIT;
+				seeker = uint32((seeker_right+seeker_left)/2);
+				% Absolute worst case should be POP_LIMIT/2
 				for iter=1:1:POPULATION_LIMIT
-					if temp <= sig_fit(seeker)
-						if temp > sig_fit(seeker-1)
+					if (temp <= sig_fit(seeker))
+						if (seeker>1)
+							if (temp > sig_fit(seeker-1))
+								ma = seeker;
+								break;
+							else
+								seeker_right = seeker;
+								seeker = uint32((seeker_right+seeker_left)/2);
+							end
+						else
 							ma = seeker;
 							break;
-						else
-							seeker = uint32(seeker/2);
 						end
 					else
-						if temp <= sig_fit(seeker+1)
-							ma = seeker+1;
-							break;
+						if (seeker < POPULATION_LIMIT)
+							if (temp <= sig_fit(seeker+1))
+								ma = seeker+1;
+								break;
+							else
+								seeker_left = seeker;
+								seeker = uint32((seeker_right+seeker_left)/2);
+							end
 						else
-							seeker = uint32(seeker + (seeker/2));
+							ma = seeker;
+							break;
 						end
 					end
 				end
@@ -178,21 +202,36 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 				temp = rand()*sig_fit(POPULATION_LIMIT);
 
 				% Bisecting search for parent
-				seeker = uint32(POPULATION_LIMIT/2);
+				seeker_left = 1;
+				seeker_right = POPULATION_LIMIT;
+				seeker = uint32((seeker_right+seeker_left)/2);
+				% Absolute worst case should be POP_LIMIT/2
 				for iter=1:1:POPULATION_LIMIT
-					if temp <= sig_fit(seeker)
-						if temp > sig_fit(seeker-1)
+					if (temp <= sig_fit(seeker))
+						if (seeker>1)
+							if (temp > sig_fit(seeker-1))
+								pa = seeker;
+								break;
+							else
+								seeker_right = seeker;
+								seeker = uint32((seeker_right+seeker_left)/2);
+							end
+						else
 							pa = seeker;
 							break;
-						else
-							seeker = uint32(seeker/2);
 						end
 					else
-						if temp <= sig_fit(seeker+1)
-							pa = seeker+1;
-							break;
+						if (seeker < POPULATION_LIMIT)
+							if (temp <= sig_fit(seeker+1))
+								pa = seeker+1;
+								break;
+							else
+								seeker_left = seeker;
+								seeker = uint32((seeker_right+seeker_left)/2);
+							end
 						else
-							seeker = uint32(seeker + (seeker/2));
+							pa = seeker;
+							break;
 						end
 					end
 				end
@@ -226,7 +265,5 @@ end
 % End of Symptom Set
 
 
-filename = sprintf("./output_%d",uint32(rand()*1000000000))
+filename = sprintf("./output_%d",uint32(rand()*1000000000));
 save filename First Second Third;
-
-
