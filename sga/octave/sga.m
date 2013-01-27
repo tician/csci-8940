@@ -67,15 +67,20 @@ end
 %	best_t Third[NUMBER_SYMPTOMS];
 %	uint32_t EvaluationsToOptimum[(1<<NUMBER_SYMPTOMS)-1][TRIAL_LIMIT];
 
+First  = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2);
+Second = zeros((2^NUMBER_SYPMTOMS)-1, TRIAL_LIMIT, 2);
+Third  = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2);
+EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
+
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
 for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 
 	% Repeat for some number of trials
 	trial = 1;
-	for trial=1:1:TRIAL_LIMIT-1
+	for trial=1:1:TRIAL_LIMIT
 		FoundOptimum = 0;
-		EvaluationsToOptimum(symptom_set,trial) = 0;
+		EvaluationsToOptimum(symptom_set,trial) = 1;
 
 		% Repeat for some number of generations
 		generation = 1;
@@ -83,23 +88,33 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 			first_f=0.0; second=0.0; third=0.0;
 			first_g=0; second_g=0; third_g=0;
 
-			% Cycle through the entire population
+			% Cycle through the entire population to calculate fitnesses
 			individual = 1;
+			sig_fit = zeros(1,POPULATION_LIMIT);
+			sin_fit = zeros(1,POPULATION_LIMIT);
+			
 			for individual=1:1:POPULATION_LIMIT
+
+				sin_fit(individual) = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationsInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
+
+				% Update Sigma Fitness array for roulette wheel selection
+				if individual > 1
+					sig_fit(individual) = sin_fit(individual-1) + sin_fit(individual);
+				else
+					sig_fit(individual) = sin_fit(individual);
+				end
+
 				if !FoundOptimum
 					EvaluationsToOptimum(symptom_set,trial)++;
-				end
-				
-				temp = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationsInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
-
-				if abs(temp-qOptimumDiagnoses(symptom_set,1)) < DIFFERENCE_FROM_OPTIMUM
-					FoundOptimum=1;
+					if abs(sin_fit(individual)-qOptimumDiagnoses(symptom_set,1)) < DIFFERENCE_FROM_OPTIMUM
+						FoundOptimum=1;
+					end
 				end
 
-				if temp > first_f
+				if sin_fit(individual) > first_f
 					third_f = second_f;
 					second_f = first_f;
-					first_f = temp;
+					first_f = sin_fit(individual);
 					
 					third_g = second_g;
 					second_g = first_g;
@@ -107,26 +122,36 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 				end
 			end
 			% End of fitness evaluations
-				
+
 			% Update First, Second, and Third best fitness values
-			if first_f > First(symptom_set-1,fitness)
-				if (second_f > Second[symptom_set-1].fitness)
-					if (third_f > Third[symptom_set-1].fitness)
-						Third[symptom_set-1].fitness = third_f;
-						Third[symptom_set-1].generation = third_g;
+			if first_f > First(symptom_set,trial,1)
+				if second_f > Second(symptom_set,trial,1)
+					if third_f > Third(symptom_set,trial,1)
+						Third(symptom_set,trial,1) = third_f;
+						Third(symptom_set,trial,2) = third_g;
 					else
-						Third[symptom_set-1].fitness = Second[symptom_set-1].fitness;
-						Third[symptom_set-1].generation = Second[symptom_set-1].generation;
+						Third(symptom_set,trial,1) = Second(symptom_set,trial,1);
+						Third(symptom_set,trial,2) = Second(symptom_set,trial,2);
 					end
-					Second[symptom_set-1].fitness = second_f;
-					Second[symptom_set-1].generation = second_g;
+					Second(symptom_set,trial,1) = second_f;
+					Second(symptom_set,trial,2) = second_g;
 				else
-					Second[symptom_set-1].fitness = First[symptom_set-1].fitness;
-					Second[symptom_set-1].generation = First[symptom_set-1].generation;
+					Second(symptom_set,trial,1) = First(symptom_set,trial,1);
+					Second(symptom_set,trial,2) = First(symptom_set,trial,2);
 				end
-				First[symptom_set-1].fitness = temp;
-				First[symptom_set-1].generation = generation;
+				First(symptom_set,trial,1) = sin_fit(individual);
+				First(symptom_set,trial,2) = generation;
 			end
+			% End of best fitness updates
+
+			% Breed next generation
+			for individual=1:1:POPULATION_LIMIT
+				ma = 
+				da = 
+			end
+			% End of breeding
+
+
 		end
 		% End of Generation
 	end
@@ -134,8 +159,8 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 end
 % End of Symptom Set
 
+
 filename = sprintf("./output_%d",uint32(rand()*1000000000));
 save filename First Second Third;
 
-outfile << "symptom_set:\t" << iter << "\t" << First[iter-1] << "\t" << Second[iter-1] << "\t" << Third[iter-1] << "\n";
 
