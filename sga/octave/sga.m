@@ -14,15 +14,16 @@ NUMBER_DISEASES = 25;
 ZERO_FITNESS_LIMIT = 1.0e-5;
 DIFFERENCE_FROM_OPTIMUM = 1.0e-12;
 
-[qPriorProbability,qManifestationInDisease] = TendencyMatrix10x25;
+%[qPriorProbability,qManifestationInDisease] = TendencyMatrix10x25;
 qOptimumDiagnoses = ExhaustiveResults10x25;
 
 % Fix tendency values that are less than lower limit
-qManifestationInDisease = tendencyFix(qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS, ZERO_FITNESS_LIMIT);
+%qManifestationInDisease = tendencyFix(qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS, ZERO_FITNESS_LIMIT);
+load PreFixedManifestationInDisease;
 
 % Only need to calculate prior likelihood once
-qPriorLikelihood = priorLikelihoodSetup(NUMBER_DISEASES,qPriorProbability);
-
+%qPriorLikelihood = priorLikelihoodSetup(NUMBER_DISEASES,qPriorProbability);
+load PreComputedPriorLikelihood;
 
 TRIAL_LIMIT = 10;
 GENERATION_LIMIT = 50;
