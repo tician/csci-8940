@@ -1,9 +1,18 @@
+% Was using bitmask for diagnoses and symptoms because of memory efficiency,
+%  but 1) octave makes arrays very easy, 2) using integer arrays should allow
+%  code reuse, 3) the problem is no where near approaching the memory limit of
+%  my netbook, and 4) I'm not sure how great the processing advantage is for
+%  using bitwise operations instead of integer arrays (lower need to pull data
+%  from RAM instead of CPU cache).
+
 clear all;
-format long;
+%format long;
+output_precision(30);
 
 NUMBER_SYMPTOMS = 10;
 NUMBER_DISEASES = 25;
-ZERO_FITNESS_LIMIT = 1e-5;
+ZERO_FITNESS_LIMIT = 1.0e-5;
+DIFFERENCE_FROM_OPTIMUM = 1.0e-12;
 
 [qPriorProbability,qManifestationInDisease] = TendencyMatrix10x25;
 qOptimumDiagnoses = ExhaustiveResults10x25;
@@ -39,10 +48,6 @@ CROSSOVER_POINTS = 1;
 % returns a location at which to perform crossover
 % usage: locus = splicer(NUMBER_DISEASES)
 
-iter, jter;
-
-
-
 
 
 
@@ -63,35 +68,35 @@ end
 %	uint32_t EvaluationsToOptimum[(1<<NUMBER_SYMPTOMS)-1][TRIAL_LIMIT];
 
 % Cycle through all possible symptom sets except healthy
-symptom_set = 0;
+symptom_set = 1;
 for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 
 	% Repeat for some number of trials
-	trial = 0;
+	trial = 1;
 	for trial=1:1:TRIAL_LIMIT-1
 		FoundOptimum = 0;
-		EvaluationsToOptimum[symptom_set-1][trial] = 0;
+		EvaluationsToOptimum(symptom_set,trial) = 0;
 
 		% Repeat for some number of generations
-		uint32_t generation;
-		for (generation=0; generation<GENERATION_LIMIT; generation++)
+		generation = 1;
+		for generation=1:1:GENERATION_LIMIT
 			first_f=0.0; second=0.0; third=0.0;
 			first_g=0; second_g=0; third_g=0;
 
 			% Cycle through the entire population
-			uint32_t individual;
-			for (individual=0; individual<POPULATION_LIMIT; individual++)
+			individual = 1;
+			for individual=1:1:POPULATION_LIMIT
 				if !FoundOptimum
-					EvaluationsToOptimum[symptom_set-1][trial]++;
+					EvaluationsToOptimum(symptom_set,trial)++;
 				end
 				
-				temp = fitness(population[individual],symptom_set);
+				temp = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationsInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
 
-				if abs(temp-qOptimumDiagnoses(symptom_set-1,0)) < 0.00001
+				if abs(temp-qOptimumDiagnoses(symptom_set,1)) < DIFFERENCE_FROM_OPTIMUM
 					FoundOptimum=1;
 				end
 
-				if (temp>first_f)
+				if temp > first_f
 					third_f = second_f;
 					second_f = first_f;
 					first_f = temp;
@@ -123,37 +128,14 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 				First[symptom_set-1].generation = generation;
 			end
 		end
-		% End of generation
+		% End of Generation
 	end
 	% End of Trial
+end
+% End of Symptom Set
 
+filename = sprintf("./output_%d",uint32(rand()*1000000000));
+save filename First Second Third;
 
-
-
-	stringstream strstr (stringstream::in | stringstream::out);
-	strstr.clear();	strstr.str("");
-	strstr << "./output_";
-	for (iter=0; iter<8; iter++)
-	{
-		strstr << splicer;
-	}
-	strstr << ".txt";
-	string outname;
-	outname = strstr.str();
-	ofstream outfile;
-	outfile.open( outname );
-
-	if ( !outfile.is_open() )
-	{
-		cerr << "Unable to open file: " << outname << "\n";
-		return 1;
-	}
-	for (iter=1; iter<(1<<NUMBER_SYMPTOMS); iter++)
-	{
-		outfile << "symptom_set:\t" << iter << "\t" << First[iter-1] << "\t" << Second[iter-1] << "\t" << Third[iter-1] << "\n";
-	}
-	outfile.close();
-
-	return 0;
-}
+outfile << "symptom_set:\t" << iter << "\t" << First[iter-1] << "\t" << Second[iter-1] << "\t" << Third[iter-1] << "\n";
 
