@@ -4,7 +4,7 @@
  */
 %}
 
-function fitness_value = fitness(diagnosis, symptoms, qPriorLikelihood, qManifestationsInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS)
+function fitness_value = fitness(diagnosis, symptoms, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS)
 
 
 L1 = 1.0;
@@ -45,5 +45,5 @@ for iter=1:1:NUMBER_DISEASES
 	end
 end
 
-fitness_value = (L1 * L2 * L3);
+fitness_value = (L1 * L2 * L3)
 

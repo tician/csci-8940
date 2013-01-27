@@ -21,8 +21,7 @@ qOptimumDiagnoses = ExhaustiveResults10x25;
 qManifestationInDisease = tendencyFix(qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS, ZERO_FITNESS_LIMIT);
 
 % Only need to calculate prior likelihood once
-qPriorLikelihood = priorLikelihoodSetup(NUMBER_DISEASES,qPriorProbability)
-
+qPriorLikelihood = priorLikelihoodSetup(NUMBER_DISEASES,qPriorProbability);
 
 
 TRIAL_LIMIT = 10;
@@ -69,13 +68,14 @@ end
 %	uint32_t EvaluationsToOptimum[(1<<NUMBER_SYMPTOMS)-1][TRIAL_LIMIT];
 
 First  = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2);
-Second = zeros((2^NUMBER_SYPMTOMS)-1, TRIAL_LIMIT, 2);
+Second = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2);
 Third  = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2);
 EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
 
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
 for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
+	printf("Symptom_set:%d\n",symptom_set);
 
 	% Repeat for some number of trials
 	trial = 1;
@@ -86,8 +86,10 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 		% Repeat for some number of generations
 		generation = 1;
 		for generation=1:1:GENERATION_LIMIT
-			first_f=0.0; second=0.0; third=0.0;
-			first_g=0; second_g=0; third_g=0;
+			printf("Generation:%d\n",generation);
+
+			first_f=0.0; second_f=0.0; third_f=0.0;
+			first_g=0;   second_g=0;   third_g=0;
 
 			% Cycle through the entire population to calculate fitnesses
 			individual = 1;
@@ -96,7 +98,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 			
 			for individual=1:1:POPULATION_LIMIT
 
-				sin_fit(individual) = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationsInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
+				sin_fit(individual) = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
 
 				% Update Sigma Fitness array for roulette wheel selection
 				if individual > 1
@@ -123,6 +125,8 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 				end
 			end
 			% End of fitness evaluations
+
+			printf("\tFirst:%f\tSecond:%f\tThird:%f\n", first_f, second_f, third_f);
 
 			% Update First, Second, and Third best fitness values
 			if first_f > First(symptom_set,trial,1)
@@ -221,7 +225,7 @@ end
 % End of Symptom Set
 
 
-filename = sprintf("./output_%d",uint32(rand()*1000000000));
+filename = sprintf("./output_%d",uint32(rand()*1000000000))
 save filename First Second Third;
 
 
