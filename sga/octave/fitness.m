@@ -6,6 +6,7 @@
 
 function fitness_value = fitness(diagnosis, symptoms, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS)
 
+ZERO_FITNESS_LIMIT = 1.0e-5;
 
 L1 = 1.0;
 L2 = 1.0;
@@ -20,7 +21,11 @@ for iter=1:1:NUMBER_SYMPTOMS
 			if diagnosis(jter)
 				temp *= (1.0-qManifestationInDisease(iter,jter));
 			end
-			L1 *= (1.0-temp);
+			if ((1.0-temp)>ZERO_FITNESS_LIMIT)
+				L1 *= (1.0-temp);
+			else
+				L1 *= ZERO_FITNESS_LIMIT;
+			end
 		end
 	end
 end
@@ -30,7 +35,7 @@ for iter=1:1:NUMBER_DISEASES
 	if diagnosis(iter)
 		temp = 1.0;
 		for jter=1:1:NUMBER_SYMPTOMS
-			if bitset(symptoms, jter) == 0
+			if bitget(symptoms, jter) == 0
 				temp *= (1.0-qManifestationInDisease(jter,iter));
 			end
 			L2 *= (temp);
@@ -45,5 +50,5 @@ for iter=1:1:NUMBER_DISEASES
 	end
 end
 
-fitness_value = (L1 * L2 * L3)
+fitness_value = (L1 * L2 * L3);
 

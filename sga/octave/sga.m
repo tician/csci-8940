@@ -22,10 +22,12 @@ qOptimumDiagnoses = ExhaustiveResults10x25;
 % Fix tendency values that are less than lower limit
 %qManifestationInDisease = tendencyFix(qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS, ZERO_FITNESS_LIMIT);
 load PreFixedManifestationInDisease;
+%qManifestationInDisease
 
 % Only need to calculate prior likelihood once
 %qPriorLikelihood = priorLikelihoodSetup(NUMBER_DISEASES,qPriorProbability);
 load PreComputedPriorLikelihood;
+%qPriorLikelihood
 
 TRIAL_LIMIT = 10;
 GENERATION_LIMIT = 50;
@@ -59,10 +61,6 @@ CROSSOVER_POINTS = 1;
 population = zeros(POPULATION_LIMIT,NUMBER_DISEASES);
 
 
-%Generate first generation (random)
-for iter=1:1:POPULATION_LIMIT
-	population(iter,:) = populator(NUMBER_DISEASES);
-end
 
 % Store some statistics
 %	best_t First[NUMBER_SYMPTOMS];
@@ -70,29 +68,36 @@ end
 %	best_t Third[NUMBER_SYMPTOMS];
 %	uint32_t EvaluationsToOptimum[(1<<NUMBER_SYMPTOMS)-1][TRIAL_LIMIT];
 
-First  = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2);
-Second = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2);
-Third  = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2);
+First  = ones((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2)*-0.1;
+Second = ones((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2)*-0.1;
+Third  = ones((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2)*-0.1;
 EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
 
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
 for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
-	printf("Symptom_set:%d\n",symptom_set)
+	printf("Symptom_set: %d\n",symptom_set)
 	pause(1)
 
 	% Repeat for some number of trials
 	trial = 1;
 	for trial=1:1:TRIAL_LIMIT
+		%Generate first generation (random)
+		for iter=1:1:POPULATION_LIMIT
+			population(iter,:) = populator(NUMBER_DISEASES);
+		end
+%		population
+
 		FoundOptimum = 0;
 		EvaluationsToOptimum(symptom_set,trial) = 1;
 
 		% Repeat for some number of generations
 		generation = 1;
 		for generation=1:1:GENERATION_LIMIT
-			printf("Generation:%d\n",generation)
+			printf("Generation: %d\n",generation)
+			pause(1)
 
-			first_f=0.0; second_f=0.0; third_f=0.0;
+			first_f=-0.1; second_f=-0.1; third_f=-0.1;
 			first_g=0;   second_g=0;   third_g=0;
 
 			% Cycle through the entire population to calculate fitnesses
@@ -118,25 +123,25 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 					end
 				end
 
-				if (temp>third_f)
-					if (temp>second_f)
-						if (temp>first_f)
+				if (sin_fit(individual)>third_f)
+					if (sin_fit(individual)>second_f)
+						if (sin_fit(individual)>first_f)
 							third_f = second_f;
 							second_f = first_f;
-							first_f = temp;
+							first_f = sin_fit(individual);
 
 							third_g = second_g;
 							second_g = first_g;
 							first_g = generation;
 						else
 							third_f = second_f;
-							second_f = temp;
+							second_f = sin_fit(individual);
 
 							third_g = second_g;
 							second_g = generation;
 						end
 					else
-						third_f = temp;
+						third_f = sin_fit(individual);
 
 						third_g = generation;
 					end
@@ -149,7 +154,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 			% Update First, Second, and Third best fitness values
 			if (first_f > Third(symptom_set,trial,1))
 				if (first_f > Second(symptom_set,trial,1))
-					if (first_f > First(symptom_set,trial,1)
+					if (first_f > First(symptom_set,trial,1))
 						First(symptom_set,trial,1) = first_f;
 						First(symptom_set,trial,2) = first_g;
 
@@ -166,7 +171,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 							Third(symptom_set,trial,2) = second_g;
 						end
 					else
-						Second(symptom_set,trial,1) = first_t
+						Second(symptom_set,trial,1) = first_f;
 						Second(symptom_set,trial,2) = first_g;
 					end
 				else

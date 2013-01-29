@@ -169,7 +169,7 @@ int main(void)
 						}
 						else
 						{
-							Second[symptom_set-1].fitness = first_t
+							Second[symptom_set-1].fitness = first_f;
 							Second[symptom_set-1].generation = first_g;
 						}
 					}
