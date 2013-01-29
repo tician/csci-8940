@@ -15,6 +15,7 @@
 #define NUMBER_INDIVIDUALS			200
 
 #define MUTATION_RATE				0.003
+#define CROSSOVER_RATE				0.1
 #define CROSSOVER_POINTS			1
 
 #define ZERO_FITNESS_LIMIT			1.0e-5
@@ -44,20 +45,22 @@ private:
 	boost::random::mersenne_twister::mt19937 gen = boost::random::mersenne_twister::mt19937();
 
 	// Possible Diagnoses: 0 ~ 33 554 431 (2^(25)-1) (None to All)
-	boost::uniform_int<int> pop_dist(0,(1<<(NUMBER_GENES))-1);
+	boost::uniform_int<int> specimen_generator(0,(1<<(NUMBER_GENES))-1);
 
 	// Mutate when mutagen()==0
-	boost::uniform_int<int> mut_dist(0,(int)(1/MUTATION_RATE));
+	boost::uniform_int<int> mutation_generator(0,(int)(1/MUTATION_RATE));
 
+	// Crossover when cpg()==0
+	boost::uniform_int<int> crossover_point_generator(0,(int)(1/CROSSOVER_RATE));
 	// Crossover loci (0 ~ 24)
-	boost::uniform_int<int> xvr_dist(0,NUMBER_GENES-1);
+	boost::uniform_int<int> crossover_point_generator(0,NUMBER_GENES-1);
 public:
 	specimen_t populator(void)
 	{
 		specimen_t bread;
 
 		uint32_t iter;
-		uint32_t indi = pop_dist();
+		uint32_t indi = specimen_generator();
 
 		for (iter=0; iter<NUMBER_GENES; iter++)
 		{
@@ -71,14 +74,41 @@ public:
 	}
 	bool mutagen(void)
 	{
-		if (mut_dist(gen)<1)
+		if (mutation_generator(gen)<1)
 			return true;
 		else
 			return false;
 	}
-	uint32_t splicer (void)
+	void splicer (specimen_t* ma, specimen_t* pa)
 	{
-		return (uint32_t) xvr_dist(gen);
+		// Crossover loci (0 ~ 24)
+		// boost::uniform_int<int> crossover_point_generator(0,NUMBER_DISEASES-1);
+
+		uint32_t iter, jter;
+		uint32_t locus[CROSSOVER_POINTS];
+
+		for (iter=0; iter<CROSSOVER_POINTS; iter++)
+		{
+			if (crossover_generator(gen) < 1)
+			{
+				locus[iter] = crossover_point_generator(gen);
+			}
+		}
+
+		specimen_t temp;
+
+		for (iter=0; iter<CROSSOVER_POINTS; iter++)
+		{
+			if (locus[iter] > 0)
+			{
+				for (jter=locus[iter]; jter<NUMBER_GENES; jter++)
+				{
+					temp[jter] = ma[jter];
+					ma[jter] = pa[jter];
+					pa[jter] = temp[jter];
+				}
+			}
+		}
 	}
 };
 

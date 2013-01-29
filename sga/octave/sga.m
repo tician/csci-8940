@@ -106,7 +106,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 
 				% Update Sigma Fitness array for roulette wheel selection
 				if individual > 1
-					sig_fit(individual) = sin_fit(individual-1) + sin_fit(individual);
+					sig_fit(individual) = sig_fit(individual-1) + sin_fit(individual);
 				else
 					sig_fit(individual) = sin_fit(individual);
 				end
@@ -118,21 +118,28 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 					end
 				end
 
-				if sin_fit(individual) > first_f
-					third_f = second_f;
-					second_f = first_f;
-					first_f = sin_fit(individual);
-					third_g = second_g;
-					second_g = first_g;
-					first_g = generation;
-				elseif sin_fit(individual) > second_f
-					third_f = second_f;
-					second_f = sin_fit(individual);
-					third_g = second_g;
-					second_g = generation;
-				elseif sin_fit(individual) > third_f
-					third_f = sin_fit(individual);
-					third_g = generation;
+				if (temp>third_f)
+					if (temp>second_f)
+						if (temp>first_f)
+							third_f = second_f;
+							second_f = first_f;
+							first_f = temp;
+
+							third_g = second_g;
+							second_g = first_g;
+							first_g = generation;
+						else
+							third_f = second_f;
+							second_f = temp;
+
+							third_g = second_g;
+							second_g = generation;
+						end
+					else
+						third_f = temp;
+
+						third_g = generation;
+					end
 				end
 			end
 			% End of fitness evaluations
@@ -140,23 +147,32 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 			printf("\tFirst:%f\tSecond:%f\tThird:%f\n", first_f, second_f, third_f)
 
 			% Update First, Second, and Third best fitness values
-			if first_f > First(symptom_set,trial,1)
-				if second_f > Second(symptom_set,trial,1)
-					if third_f > Third(symptom_set,trial,1)
-						Third(symptom_set,trial,1) = third_f;
-						Third(symptom_set,trial,2) = third_g;
+			if (first_f > Third(symptom_set,trial,1))
+				if (first_f > Second(symptom_set,trial,1))
+					if (first_f > First(symptom_set,trial,1)
+						First(symptom_set,trial,1) = first_f;
+						First(symptom_set,trial,2) = first_g;
+
+						if (second_f > Second(symptom_set,trial,1))
+							Second(symptom_set,trial,1) = second_f;
+							Second(symptom_set,trial,2) = second_g;
+
+							if (third_f > Third(symptom_set,trial,1))
+								Third(symptom_set,trial,1) = third_f;
+								Third(symptom_set,trial,2) = third_g;
+							end
+						elseif (second_f > Third(symptom_set,trial,1))
+							Third(symptom_set,trial,1) = second_f;
+							Third(symptom_set,trial,2) = second_g;
+						end
 					else
-						Third(symptom_set,trial,1) = Second(symptom_set,trial,1);
-						Third(symptom_set,trial,2) = Second(symptom_set,trial,2);
+						Second(symptom_set,trial,1) = first_t
+						Second(symptom_set,trial,2) = first_g;
 					end
-					Second(symptom_set,trial,1) = second_f;
-					Second(symptom_set,trial,2) = second_g;
 				else
-					Second(symptom_set,trial,1) = First(symptom_set,trial,1);
-					Second(symptom_set,trial,2) = First(symptom_set,trial,2);
+					Third(symptom_set,trial,1) = first_f;
+					Third(symptom_set,trial,2) = first_g;
 				end
-				First(symptom_set,trial,1) = sin_fit(individual);
-				First(symptom_set,trial,2) = generation;
 			end
 			% End of best fitness updates
 

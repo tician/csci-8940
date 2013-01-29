@@ -34,7 +34,7 @@
 		</Compiler>
 		<Unit filename="ExhaustiveResults10x25.h" />
 		<Unit filename="TendencyMatrix10x25.h" />
-		<Unit filename="fitness.h" />
+		<Unit filename="genie.h" />
 		<Unit filename="sga.cpp" />
 		<Extensions>
 			<code_completion />

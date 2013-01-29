@@ -29,16 +29,16 @@ int main(void)
 //	std::default_random_engine generator;
 
 	// Possible Diagnoses: 0 ~ 33 554 431 (2^(25)-1) (None to All)
-//	std::uniform_int_distribution<uint32_t> pop_dist(0,(1<<(NUMBER_GENES))-1);
-//	uint32_t pop_creator = std::bind( pop_dist, generator );
+//	std::uniform_int_distribution<uint32_t> specimen_generator(0,(1<<(NUMBER_GENES))-1);
+//	uint32_t pop_creator = std::bind( specimen_generator, generator );
 
 	// Mutate when mutagen()==0
 //	std::uniform_int_distribution<int> mut_dist(0,(uint32_t)(1/MUTATION_RATE));
 //	uint32_t mutagen = std::bind( mut_dist, generator );
 
 	// Crossover loci (0 ~ 24)
-//	std::uniform_int_distribution<int> xvr_dist(0,NUMBER_GENES-1);
-//	uint32_t splicer = std::bind( xvr_dist, generator );
+//	std::uniform_int_distribution<int> crossover_point_generator(0,NUMBER_GENES-1);
+//	uint32_t splicer = std::bind( crossover_point_generator, generator );
 
 	// Generate first generation
 	for (iter=0; iter<NUMBER_INDIVIDUALS; iter++)
@@ -57,10 +57,14 @@ int main(void)
 	uint32_t symptom_set;
 	for (symptom_set=1; symptom_set<(1<<NUMBER_SYMPTOMS); symptom_set++)
 	{
+		cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nSymptom Set: " << symptom_set
+			<< "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+
 		// Repeat for some number of trials
 		uint32_t trial;
 		for (trial=0; trial<NUMBER_TRIALS; trial++)
 		{
+			cout << "~~~~~~~~~~~~~~~~~~~~\nTrial: " << trial << "\n~~~~~~~~~~~~~~~~~~~~\n";
 			uint8_t FoundOptimum = 0;
 			EvaluationsToOptimum[symptom_set-1][trial] = 0;
 
@@ -73,63 +77,115 @@ int main(void)
 
 				// Cycle through the entire population
 				uint32_t individual;
+				__float128 sin_fit[NUMBER_INDIVIDUALS];
+				__float128 sig_fit[NUMBER_INDIVIDUALS];
 				for (individual=0; individual<NUMBER_INDIVIDUALS; individual++)
 				{
-					if (!FoundOptimum)
+					sin_fit = fitness(population[individual],symptom_set);
+
+
+					// Update Sigma Fitness array for roulette wheel selection
+					if (individual > 1)
 					{
-						EvaluationsToOptimum[symptom_set-1][trial]++;
-					}
-
-					__float128 temp = fitness(population[individual],symptom_set);
-
-					if ( abs(temp-qOptimumDiagnoses[symptom_set-1][0]) < 0.00001 )
-					{
-						FoundOptimum=1;
-					}
-
-					if (temp>first_f)
-					{
-						third_f = second_f;
-						second_f = first_f;
-						first_f = temp;
-
-						third_g = second_g;
-						second_g = first_g;
-						first_g = generation;
-					}
-				}
-				// End of fitness evaluations
-
-				// Update First, Second, and Third best fitness values
-				if (first_f > First[symptom_set-1].fitness)
-				{
-					if (second_f > Second[symptom_set-1].fitness)
-					{
-						if (third_f > Third[symptom_set-1].fitness)
-						{
-							Third[symptom_set-1].fitness = third_f;
-							Third[symptom_set-1].generation = third_g;
-						}
-						else
-						{
-							Third[symptom_set-1].fitness = Second[symptom_set-1].fitness;
-							Third[symptom_set-1].generation = Second[symptom_set-1].generation;
-						}
-						Second[symptom_set-1].fitness = second_f;
-						Second[symptom_set-1].generation = second_g;
+						sig_fit(individual) = sig_fit(individual-1) + sin_fit(individual);
 					}
 					else
 					{
-						Second[symptom_set-1].fitness = First[symptom_set-1].fitness;
-						Second[symptom_set-1].generation = First[symptom_set-1].generation;
+						sig_fit(individual) = sin_fit(individual);
 					}
-					First[symptom_set-1].fitness = temp;
-					First[symptom_set-1].generation = generation;
+
+
+					if (!FoundOptimum)
+					{
+						EvaluationsToOptimum[symptom_set-1][trial]++;
+						if ( abs(temp-qOptimumDiagnoses[symptom_set-1][0]) < 0.00001 ) )
+						{
+							FoundOptimum=1;
+						}
+					}
+
+
+
+					if (temp>third_f)
+					{
+						if (temp>second_f)
+						{
+							if (temp>first_f)
+							{
+								third_f = second_f;
+								second_f = first_f;
+								first_f = temp;
+
+								third_g = second_g;
+								second_g = first_g;
+								first_g = generation;
+							}
+							else
+							{
+								third_f = second_f;
+								second_f = temp;
+
+								third_g = second_g;
+								second_g = generation;
+							}
+						}
+						else
+						{
+							third_f = temp;
+
+							third_g = generation;
+						}
+					}
 				}
-				// End of generation
+				// End of fitness evaluations
+				cout << "Generation: " << generation << "\tFirst: " << first_f << "\t Second: " << second_f << "\t Third: " << third_f << endl;
+
+				// Update First, Second, and Third best fitness values
+				if (first_f > Third[symptom_set-1].fitness)
+				{
+					if (first_f > Second[symptom_set-1].fitness)
+					{
+						if (first_f > First[symptom_set-1].fitness)
+						{
+							First[symptom_set-1].fitness = first_f;
+							First[symptom_set-1].generation = first_g;
+
+							if (second_f > Second[symptom_set-1].fitness)
+							{
+								Second[symptom_set-1].fitness = second_f;
+								Second[symptom_set-1].generation = second_g;
+
+								if (third_f > Third[symptom_set-1].fitness)
+								{
+									Third[symptom_set-1].fitness = third_f;
+									Third[symptom_set-1].generation = third_g;
+								}
+							}
+							else if (second_f > Third[symptom_set-1].fitness)
+							{
+								Third[symptom_set-1].fitness = second_f;
+								Third[symptom_set-1].generation = second_g;
+							}
+						}
+						else
+						{
+							Second[symptom_set-1].fitness = first_t
+							Second[symptom_set-1].generation = first_g;
+						}
+					}
+					else
+					{
+						Third[symptom_set-1].fitness = first_f;
+						Third[symptom_set-1].generation = first_g;
+					}
+				}
+
+
+
 			}
-			// End of Trial
+			// End of generation
 		}
+		// End of Trial
 	}
 
 	stringstream strstr (stringstream::in | stringstream::out);
