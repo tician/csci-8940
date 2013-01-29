@@ -78,7 +78,8 @@ EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
 for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
-	printf("Symptom_set:%d\n",symptom_set);
+	printf("Symptom_set:%d\n",symptom_set)
+	pause(1)
 
 	% Repeat for some number of trials
 	trial = 1;
@@ -89,7 +90,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 		% Repeat for some number of generations
 		generation = 1;
 		for generation=1:1:GENERATION_LIMIT
-			printf("Generation:%d\n",generation);
+			printf("Generation:%d\n",generation)
 
 			first_f=0.0; second_f=0.0; third_f=0.0;
 			first_g=0;   second_g=0;   third_g=0;
@@ -124,19 +125,19 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 					third_g = second_g;
 					second_g = first_g;
 					first_g = generation;
-				else if sin_fit(individual) > second_f
+				elseif sin_fit(individual) > second_f
 					third_f = second_f;
 					second_f = sin_fit(individual);
 					third_g = second_g;
 					second_g = generation;
-				else if sin_fit(individual) > third_f
+				elseif sin_fit(individual) > third_f
 					third_f = sin_fit(individual);
 					third_g = generation;
 				end
 			end
 			% End of fitness evaluations
 
-			printf("\tFirst:%f\tSecond:%f\tThird:%f\n", first_f, second_f, third_f);
+			printf("\tFirst:%f\tSecond:%f\tThird:%f\n", first_f, second_f, third_f)
 
 			% Update First, Second, and Third best fitness values
 			if first_f > First(symptom_set,trial,1)
@@ -237,7 +238,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 				end
 
 				% Crossover
-				[ba,by] = splicer(ma,pa,CROSSOVER_RATE,CROSSOVER_POINTS,NUMBER_DISEASES);
+				[ba,by] = splicer(population(ma,:), population(pa,:), CROSSOVER_RATE, CROSSOVER_POINTS, NUMBER_DISEASES);
 				
 				population(((iter-1)*2)+1,:) = ba;
 				population(((iter-1)*2)+2,:) = by;
@@ -261,9 +262,9 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 		% End of Generation
 	end
 	% End of Trial
+filename = sprintf("./output_%d",uint32(rand()*1000000000));
+save( filename, "First", "Second", "Third");
 end
 % End of Symptom Set
 
 
-filename = sprintf("./output_%d",uint32(rand()*1000000000));
-save filename First Second Third;

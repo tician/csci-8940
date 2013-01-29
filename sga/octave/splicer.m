@@ -13,7 +13,7 @@ for iter=1:1:points
 	end
 end
 
-locus = sort(locus)
+locus = sort(locus);
 
 ba = ma;
 by = pa;
