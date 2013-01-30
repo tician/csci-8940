@@ -185,6 +185,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 
 			% Breed next generation
 			for individual=1:1:uint32(POPULATION_LIMIT/2)
+				ma=1;pa=1;
 
 				temp = rand()*sig_fit(POPULATION_LIMIT);
 				for iter=POPULATION_LIMIT-1:1:1
