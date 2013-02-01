@@ -8,7 +8,7 @@ jter=1;
 locus = zeros(1,points);
 
 for iter=1:1:points
-	if uint32( rand() * (1/rate)) < 1
+	if ((rand() * (1/rate)) < 1)
 		locus(iter) = uint32( rand() * genes );
 	end
 end

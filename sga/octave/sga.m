@@ -8,6 +8,7 @@
 %}
 
 clear all;
+more off;
 %format long;
 output_precision(30);
 
@@ -30,11 +31,11 @@ load PreComputedPriorLikelihood;
 %qPriorLikelihood
 
 TRIAL_LIMIT = 10;
-GENERATION_LIMIT = 50;
+GENERATION_LIMIT = 30;
 POPULATION_LIMIT = 200;
 
 MUTATION_RATE = 0.003;
-CROSSOVER_RATE = 0.1;
+CROSSOVER_RATE = 0.6;
 CROSSOVER_POINTS = 1;
 
 
@@ -71,17 +72,24 @@ population = zeros(POPULATION_LIMIT,NUMBER_DISEASES);
 First  = ones((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2)*-0.1;
 Second = ones((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2)*-0.1;
 Third  = ones((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2)*-0.1;
+
+First_Pop  = zeros((2^NUMBER_SYMPTOMS)-1,TRIAL_LIMIT, NUMBER_DISEASES);
+Second_Pop = zeros((2^NUMBER_SYMPTOMS)-1,TRIAL_LIMIT, NUMBER_DISEASES);
+Third_Pop  = zeros((2^NUMBER_SYMPTOMS)-1,TRIAL_LIMIT, NUMBER_DISEASES);
+
 EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
 
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
 for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 	printf("Symptom_set: %d\n",symptom_set)
-	pause(1)
+%	pause(1)
 
 	% Repeat for some number of trials
 	trial = 1;
 	for trial=1:1:TRIAL_LIMIT
+		printf(" Trial: %d\n",trial)
+
 		%Generate first generation (random)
 		for iter=1:1:POPULATION_LIMIT
 			population(iter,:) = populator(NUMBER_DISEASES);
@@ -94,11 +102,22 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 		% Repeat for some number of generations
 		generation = 1;
 		for generation=1:1:GENERATION_LIMIT
-			printf("Generation: %d\n",generation)
-			pause(1)
+			printf("  Generation: %d\n",generation)
+%			pause(1)
+			population
+
+			clear first_f first_g first_i;
+			clear second_f second_g second_i;
+			clear third_f third_g third_i;
+			clear sin_fit sig_fit;
+			clear ma pa ba by;
+			clear iter jter kter;
 
 			first_f=-0.1; second_f=-0.1; third_f=-0.1;
 			first_g=0;   second_g=0;   third_g=0;
+			first_i=zeros(1,NUMBER_DISEASES);
+			second_i=zeros(1,NUMBER_DISEASES);
+			third_i=zeros(1,NUMBER_DISEASES);
 
 			% Cycle through the entire population to calculate fitnesses
 			individual = 1;
@@ -123,9 +142,9 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 					end
 				end
 
-				if (sin_fit(individual)>third_f)
-					if (sin_fit(individual)>second_f)
-						if (sin_fit(individual)>first_f)
+				if ( (sin_fit(individual)>third_f) )%> ZERO_FITNESS_LIMIT )
+					if ( (sin_fit(individual)>second_f) )%> ZERO_FITNESS_LIMIT )
+						if ( (sin_fit(individual)>first_f) )%> ZERO_FITNESS_LIMIT )
 							third_f = second_f;
 							second_f = first_f;
 							first_f = sin_fit(individual);
@@ -133,52 +152,73 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 							third_g = second_g;
 							second_g = first_g;
 							first_g = generation;
-						else
+
+							third_i = second_i;
+							second_i = first_i;
+							first_i = population(individual,:);
+						elseif ( abs(sin_fit(individual)-first_f) > ZERO_FITNESS_LIMIT )
 							third_f = second_f;
 							second_f = sin_fit(individual);
 
 							third_g = second_g;
 							second_g = generation;
+
+							third_i = second_i;
+							second_i = population(individual,:);
 						end
-					else
+					elseif ( abs(sin_fit(individual)-second_f) > ZERO_FITNESS_LIMIT )
 						third_f = sin_fit(individual);
 
 						third_g = generation;
+
+						third_i = population(individual,:);
 					end
 				end
 			end
 			% End of fitness evaluations
 
 			first_f
+			first_i
 			second_f
+			second_i
 			third_f
+			third_i
+
+%			sin_fit
+%			sig_fit
 
 			% Update First, Second, and Third best fitness values
-			if (first_f > Third(symptom_set,trial,1))
-				if (first_f > Second(symptom_set,trial,1))
-					if (first_f > First(symptom_set,trial,1))
+			if ( (first_f > Third(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
+				if ( (first_f > Second(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
+					if ( (first_f > First(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
 						First(symptom_set,trial,1) = first_f;
 						First(symptom_set,trial,2) = first_g;
+						First_Pop(symptom_set,trial,:) = first_i;
 
-						if (second_f > Second(symptom_set,trial,1))
+						if ( (second_f > Second(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
 							Second(symptom_set,trial,1) = second_f;
 							Second(symptom_set,trial,2) = second_g;
+							Second_Pop(symptom_set,trial,:) = second_i;
 
-							if (third_f > Third(symptom_set,trial,1))
+							if ( (third_f > Third(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
 								Third(symptom_set,trial,1) = third_f;
 								Third(symptom_set,trial,2) = third_g;
+								Third_Pop(symptom_set,trial,:) = third_i;
 							end
-						elseif (second_f > Third(symptom_set,trial,1))
+						elseif ( (second_f > Third(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
 							Third(symptom_set,trial,1) = second_f;
 							Third(symptom_set,trial,2) = second_g;
+							Third_Pop(symptom_set,trial,:) = second_i;
 						end
 					else
 						Second(symptom_set,trial,1) = first_f;
 						Second(symptom_set,trial,2) = first_g;
+						Second_Pop(symptom_set,trial,:) = first_i;
 					end
 				else
 					Third(symptom_set,trial,1) = first_f;
 					Third(symptom_set,trial,2) = first_g;
+					Third_Pop(symptom_set,trial,:) = first_i;
 				end
 			end
 			% End of best fitness updates
@@ -188,8 +228,8 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 				ma=1;pa=1;
 
 				temp = rand()*sig_fit(POPULATION_LIMIT);
-				for iter=POPULATION_LIMIT-1:1:1
-					if (temp > sig_fit(iter)) & (temp < sig_fit(iter+1))
+				for iter=1:1:POPULATION_LIMIT
+					if (temp <= sig_fit(iter))
 						ma = iter;
 						break;
 					end
@@ -232,8 +272,8 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 				end
 %}
 				temp = rand()*sig_fit(POPULATION_LIMIT);
-				for iter=POPULATION_LIMIT-1:1:1
-					if (temp > sig_fit(iter)) & (temp < sig_fit(iter+1))
+				for iter=1:1:POPULATION_LIMIT
+					if (temp <= sig_fit(iter))
 						pa = iter;
 						break;
 					end
@@ -276,6 +316,10 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 %}
 				% Crossover
 				[ba,by] = splicer(population(ma,:), population(pa,:), CROSSOVER_RATE, CROSSOVER_POINTS, NUMBER_DISEASES);
+%				population(ma,:)
+%				population(pa,:)
+%				ba
+%				by
 				
 				population(((individual-1)*2)+1,:) = ba;
 				population(((individual-1)*2)+2,:) = by;
@@ -303,7 +347,13 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 	small_First = First(symptom_set,:,:);
 	small_Second = Second(symptom_set,:,:);
 	small_Third = Third(symptom_set,:,:);
-	save( filename, "small_First", "small_Second", "small_Third");
+	small_First_Pop = First_Pop(symptom_set,:,:);
+	small_Second_Pop = Second_Pop(symptom_set,:,:);
+	small_Third_Pop = Third_Pop(symptom_set,:,:);
+	
+	save( filename,	"small_First", "small_First_Pop",...
+					"small_Second", "small_Second_Pop",...
+					"small_Third", "small_Third_Pop");
 end
 % End of Symptom Set
 
