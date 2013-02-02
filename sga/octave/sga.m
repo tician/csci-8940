@@ -69,13 +69,13 @@ population = zeros(POPULATION_LIMIT,NUMBER_DISEASES);
 %	best_t Third[NUMBER_SYMPTOMS];
 %	uint32_t EvaluationsToOptimum[(1<<NUMBER_SYMPTOMS)-1][TRIAL_LIMIT];
 
-First  = ones((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2)*-0.1;
-Second = ones((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2)*-0.1;
-Third  = ones((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, 2)*-0.1;
+First_Fit  = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, GENERATION_LIMIT);
+Second_Fit = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, GENERATION_LIMIT);
+Third_Fit  = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT, GENERATION_LIMIT);
 
-First_Pop  = zeros((2^NUMBER_SYMPTOMS)-1,TRIAL_LIMIT, NUMBER_DISEASES);
-Second_Pop = zeros((2^NUMBER_SYMPTOMS)-1,TRIAL_LIMIT, NUMBER_DISEASES);
-Third_Pop  = zeros((2^NUMBER_SYMPTOMS)-1,TRIAL_LIMIT, NUMBER_DISEASES);
+First_Pop  = zeros((2^NUMBER_SYMPTOMS)-1,TRIAL_LIMIT, GENERATION_LIMIT, NUMBER_DISEASES);
+Second_Pop = zeros((2^NUMBER_SYMPTOMS)-1,TRIAL_LIMIT, GENERATION_LIMIT, NUMBER_DISEASES);
+Third_Pop  = zeros((2^NUMBER_SYMPTOMS)-1,TRIAL_LIMIT, GENERATION_LIMIT, NUMBER_DISEASES);
 
 EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
 
@@ -106,18 +106,19 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 %			pause(1)
 			population
 
-			clear first_f first_g first_i;
-			clear second_f second_g second_i;
-			clear third_f third_g third_i;
+%			clear first_f first_g first_i;
+%			clear second_f second_g second_i;
+%			clear third_f third_g third_i;
+			clear sorted_fitnesses sorted_indices;
 			clear sin_fit sig_fit;
 			clear ma pa ba by;
 			clear iter jter kter;
 
-			first_f=-0.1; second_f=-0.1; third_f=-0.1;
-			first_g=0;   second_g=0;   third_g=0;
-			first_i=zeros(1,NUMBER_DISEASES);
-			second_i=zeros(1,NUMBER_DISEASES);
-			third_i=zeros(1,NUMBER_DISEASES);
+%			first_f=-0.1; second_f=-0.1; third_f=-0.1;
+%			first_g=0;   second_g=0;   third_g=0;
+%			first_i=zeros(1,NUMBER_DISEASES);
+%			second_i=zeros(1,NUMBER_DISEASES);
+%			third_i=zeros(1,NUMBER_DISEASES);
 
 			% Cycle through the entire population to calculate fitnesses
 			individual = 1;
@@ -141,7 +142,10 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 						FoundOptimum=1;
 					end
 				end
+			end
+			% End of fitness evaluations
 
+%{
 				if ( (sin_fit(individual)>third_f) )%> ZERO_FITNESS_LIMIT )
 					if ( (sin_fit(individual)>second_f) )%> ZERO_FITNESS_LIMIT )
 						if ( (sin_fit(individual)>first_f) )%> ZERO_FITNESS_LIMIT )
@@ -195,7 +199,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 						First(symptom_set,trial,2) = first_g;
 						First_Pop(symptom_set,trial,:) = first_i;
 
-						if ( (second_f > Second(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
+						if ( (second_f > First(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
 							Second(symptom_set,trial,1) = second_f;
 							Second(symptom_set,trial,2) = second_g;
 							Second_Pop(symptom_set,trial,:) = second_i;
@@ -222,6 +226,21 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 				end
 			end
 			% End of best fitness updates
+%}
+			[sorted_fitnesses,sorted_indices] = sort(sin_fit, 'descend');
+			First_Fit(symptom_set,trial,generation) = sorted_fitnesses(1);
+			First_Pop(symptom_set,trial,generation,:) = population(sorted_indices(1),:);
+			Second_Fit(symptom_set,trial,generation) = sorted_fitnesses(2);
+			Second_Pop(symptom_set,trial,generation,:) = population(sorted_indices(2),:);
+			Third_Fit(symptom_set,trial,generation) = sorted_fitnesses(3);
+			Third_Pop(symptom_set,trial,generation,:) = population(sorted_indices(3),:);
+
+			sorted_fitnesses(1)
+			population(sorted_indices(1),:)
+			sorted_fitnesses(2)
+			population(sorted_indices(2),:)
+			sorted_fitnesses(3)
+			population(sorted_indices(3),:)
 
 			% Breed next generation
 			for individual=1:1:uint32(POPULATION_LIMIT/2)
@@ -344,16 +363,16 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 	end
 	% End of Trial
 	filename = sprintf("./output_%d_%d",symptom_set,uint32(rand()*1000000000));
-	small_First = First(symptom_set,:,:);
-	small_Second = Second(symptom_set,:,:);
-	small_Third = Third(symptom_set,:,:);
-	small_First_Pop = First_Pop(symptom_set,:,:);
-	small_Second_Pop = Second_Pop(symptom_set,:,:);
-	small_Third_Pop = Third_Pop(symptom_set,:,:);
+	small_First_Fit  = First_Fit(symptom_set,:,:);
+	small_Second_Fit = Second_Fit(symptom_set,:,:);
+	small_Third_Fit  = Third_Fit(symptom_set,:,:);
+	small_First_Pop  = First_Pop(symptom_set,:,:,:);
+	small_Second_Pop = Second_Pop(symptom_set,:,:,:);
+	small_Third_Pop  = Third_Pop(symptom_set,:,:,:);
 	
-	save( filename,	"small_First", "small_First_Pop",...
-					"small_Second", "small_Second_Pop",...
-					"small_Third", "small_Third_Pop");
+	save( filename,	"small_First_Fit", "small_First_Pop",...
+					"small_Second_Fit", "small_Second_Pop",...
+					"small_Third_Fit", "small_Third_Pop");
 end
 % End of Symptom Set
 
