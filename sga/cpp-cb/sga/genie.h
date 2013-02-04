@@ -11,7 +11,7 @@
 #include <boost/random/uniform_int.hpp>
 
 #define NUMBER_TRIALS				10
-#define NUMBER_GENERATIONS			50
+#define NUMBER_GENERATIONS			30
 #define NUMBER_INDIVIDUALS			200
 
 #define MUTATION_RATE				0.003
@@ -23,14 +23,9 @@
 
 __float128 qPriorLikelihood[NUMBER_GENES];
 
-struct population_statistics_t
-{
-	__float128 fitness[NUMBER_TRIALS];
-	uint32_t generation[NUMBER_TRIALS];
-};
-
 struct specimen_t
 {
+	__float128 sin_fit;
 	bool gene[NUMBER_GENES];
 };
 
@@ -58,6 +53,7 @@ public:
 	specimen_t populator(void)
 	{
 		specimen_t bread;
+		bread.sin_fit = -100.0;
 
 		uint32_t iter;
 		uint32_t indi = specimen_generator();
@@ -112,6 +108,11 @@ public:
 	}
 };
 
+bool fitness_sorter(specimen_t i, speciment_t j)
+{
+	return (i.fitness<j.fitness);
+}
+
 
 void priorLikelihoodSetup(void)
 {
@@ -127,17 +128,14 @@ void tendencyFix(void)
 	uint32_t iter, jter;
 	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
 	{
-		for (jter=0; jter<NUMBER_GENES; jter++)
+		if (qManifestationInDisease[iter][jter] < ZERO_FITNESS_LIMIT)
 		{
-			if (qManifestationInDisease[iter][jter] < ZERO_FITNESS_LIMIT)
-			{
-				qManifestationInDisease[iter][jter] = ZERO_FITNESS_LIMIT;
-			}
+			qManifestationInDisease[iter][jter] = ZERO_FITNESS_LIMIT;
 		}
 	}
 }
 
-__float128 fitness(specimen_t diagnosis,  symptoms)
+__float128 fitness_function(specimen_t diagnosis,  symptoms)
 {
 	__float128 L1 = 1.0;
 	__float128 L2 = 1.0;

@@ -12,7 +12,7 @@ using namespace std;
 int main(void)
 {
 	randomizers genie;
-	uint32_t iter, jter;
+	uint32_t iter, jter, kter;
 
 	// Fix tendency values that are less than lower limit
 	tendencyFix();
@@ -44,14 +44,15 @@ int main(void)
 	for (iter=0; iter<NUMBER_INDIVIDUALS; iter++)
 	{
 //		population[iter] = rand() % (1<<NUMBER_GENES);
-		populi.pop[iter] = pop_creator();
+		populi.pop[iter] = populator();
 	}
 
 	// Store some statistics
-	population_statistics_t First[NUMBER_SYMPTOMS];
-	population_statistics_t Second[NUMBER_SYMPTOMS];
-	population_statistics_t Third[NUMBER_SYMPTOMS];
-	uint32_t EvaluationsToOptimum[(1<<NUMBER_SYMPTOMS)-1][NUMBER_TRIALS];
+	specimen_t First[NUMBER_TRIALS][NUMBER_GENERATIONS];
+	specimen_t Second[NUMBER_TRIALS][NUMBER_GENERATIONS];
+	specimen_t Third[NUMBER_TRIALS][NUMBER_GENERATIONS];
+
+//	uint32_t EvaluationsToOptimum[(1<<NUMBER_SYMPTOMS)-1][NUMBER_TRIALS];
 
 	// Cycle through all possible symptom sets except healthy
 	uint32_t symptom_set;
@@ -72,16 +73,13 @@ int main(void)
 			uint32_t generation;
 			for (generation=0; generation<NUMBER_GENERATIONS; generation++)
 			{
-				__float128 first_f=0.0, second_f=0.0, third_f=0.0;
-				uint32_t  first_g=0,   second_g=0,   third_g=0;
-
 				// Cycle through the entire population
 				uint32_t individual;
 				__float128 sin_fit[NUMBER_INDIVIDUALS];
 				__float128 sig_fit[NUMBER_INDIVIDUALS];
 				for (individual=0; individual<NUMBER_INDIVIDUALS; individual++)
 				{
-					sin_fit = fitness(population[individual],symptom_set);
+					sin_fit = fitness_function(population[individual],symptom_set);
 
 
 					// Update Sigma Fitness array for roulette wheel selection
@@ -105,6 +103,7 @@ int main(void)
 					}
 
 
+					std::vector<speciment_t> vector (, +POPULATION_LIMIT, fitness_sorter);
 
 					if (temp>third_f)
 					{
@@ -183,34 +182,51 @@ int main(void)
 
 
 			}
-			// End of generation
+			// End of Trial
 		}
-		// End of Trial
+		// End of Species
+
+		stringstream strstr (stringstream::in | stringstream::out);
+		strstr.clear();	strstr.str("");
+		strstr << "./output_" << ZERO_FITNESS_LIMIT
+			<< "_" << CROSSOVER_RATE "_" << MUTATION_RATE << "_" << POPULATION_LIMIT
+			<< "_" << GENERATION_LIMIT << "_" << CROSSOVER_POINTS << "_"
+			<< "_" << symptom_set << "_";
+		for (iter=0; iter<8; iter++)
+		{
+			strstr << splicer;
+		}
+		string outname;
+		outname = strstr.str();
+		ofstream outfile;
+		outfile.open( outname );
+
+		if ( !outfile.is_open() )
+		{
+			cerr << "Unable to open file: " << outname << "\n";
+			return 1;
+		}
+		for (iter=0; iter<NUMBER_TRIALS; iter++)
+		{
+			outfile << "Symptom_Set: " << symptom_set << endl;
+			outfile << "Trial: " << iter+1 << endl;
+			for (jter=0; jter<NUMBER_GENERATIONS; jter++)
+			{
+				outfile << "  Generation: " << jter+1 << endl;
+				outfile << "    First Fitness:  " << First[jter]  << endl;
+				outfile << "     First Pop: ";
+				for (kter=0; kter<NUMBER_GENES; kter++)
+				{
+					outfile << First[jter].
+				}
+				outfile << "    Second: " << Second[jter] << endl;
+				outfile << "    Third:  " << Third[jter]  << endl;
+			}
+		}
+		outfile.close();
+
 	}
 
-	stringstream strstr (stringstream::in | stringstream::out);
-	strstr.clear();	strstr.str("");
-	strstr << "./output_";
-	for (iter=0; iter<8; iter++)
-	{
-		strstr << splicer;
-	}
-	strstr << ".txt";
-	string outname;
-	outname = strstr.str();
-	ofstream outfile;
-	outfile.open( outname );
-
-	if ( !outfile.is_open() )
-	{
-		cerr << "Unable to open file: " << outname << "\n";
-		return 1;
-	}
-	for (iter=1; iter<(1<<NUMBER_SYMPTOMS); iter++)
-	{
-		outfile << "symptom_set:\t" << iter << "\t" << First[iter-1] << "\t" << Second[iter-1] << "\t" << Third[iter-1] << "\n";
-	}
-	outfile.close();
 
 	return 0;
 }

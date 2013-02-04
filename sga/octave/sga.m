@@ -81,7 +81,7 @@ EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
 
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
-for symptom_set=7:1:(2^NUMBER_SYMPTOMS)-1
+for symptom_set=47:1:(2^NUMBER_SYMPTOMS)-1
 	printf("Symptom_set: %d\n",symptom_set)
 %	pause(1)
 
@@ -100,8 +100,14 @@ for symptom_set=7:1:(2^NUMBER_SYMPTOMS)-1
 		EvaluationsToOptimum(symptom_set,trial) = 1;
 
 		% Repeat for some number of generations
+		convergence = 0;
 		generation = 1;
 		for generation=1:1:GENERATION_LIMIT
+			if convergence > 5
+				printf("   Converged at generation: %d\n", generation-1)
+				break;
+			end
+
 			printf("  Generation: %d\n",generation)
 %			pause(1)
 			population
@@ -178,6 +184,13 @@ for symptom_set=7:1:(2^NUMBER_SYMPTOMS)-1
 			population(sorted_indices(2),:)
 			sorted_fitnesses(3)
 			population(sorted_indices(3),:)
+
+			if (generation > 4) && (First_Fit(symptom_set,trial,generation) <= First_Fit(symptom_set,trial,generation-1))
+				convergence += 1;
+			else
+				convergence = 0;
+			end
+
 
 			% Breed next generation
 			for individual=1:1:uint32(POPULATION_LIMIT/2)
