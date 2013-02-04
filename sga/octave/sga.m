@@ -17,17 +17,17 @@ NUMBER_DISEASES = 25;
 ZERO_FITNESS_LIMIT = 1.0e-5;
 DIFFERENCE_FROM_OPTIMUM = 1.0e-12;
 
-%[qPriorProbability,qManifestationInDisease] = TendencyMatrix10x25;
+[qPriorProbability,qManifestationInDisease] = TendencyMatrix10x25;
 qOptimumDiagnoses = ExhaustiveResults10x25;
 
 % Fix tendency values that are less than lower limit
-%qManifestationInDisease = tendencyFix(qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS, ZERO_FITNESS_LIMIT);
-load PreFixedManifestationInDisease;
+qManifestationInDisease = tendencyFix(qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS, ZERO_FITNESS_LIMIT);
+%load PreFixedManifestationInDisease;
 %qManifestationInDisease
 
 % Only need to calculate prior likelihood once
-%qPriorLikelihood = priorLikelihoodSetup(NUMBER_DISEASES,qPriorProbability);
-load PreComputedPriorLikelihood;
+qPriorLikelihood = priorLikelihoodSetup(NUMBER_DISEASES,qPriorProbability);
+%load PreComputedPriorLikelihood;
 %qPriorLikelihood
 
 TRIAL_LIMIT = 10;
@@ -126,8 +126,15 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 			sin_fit = zeros(1,POPULATION_LIMIT);
 			
 			for individual=1:1:POPULATION_LIMIT
-
-				sin_fit(individual) = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
+				if individual > 1
+					if population(individual,:)==population(individual-1,:)
+						sin_fit(individual) = sin_fit(individual-1);
+					else
+						sin_fit(individual) = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
+					end
+				else
+					sin_fit(individual) = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
+				end
 
 				% Update Sigma Fitness array for roulette wheel selection
 				if individual > 1
@@ -362,7 +369,9 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 		% End of Generation
 	end
 	% End of Trial
-	filename = sprintf("./output_%d_%d",symptom_set,uint32(rand()*1000000000));
+	filename = sprintf("./output_%f_%f_%f_%d_%d_%d_%d_%d",...
+		FITNESS_ZERO_LIMIT, CROSSOVER_RATE, MUTATION_RATE, POPULATION_LIMIT,...
+		GENERATION_LIMIT, CROSSOVER_POINTS, symptom_set, uint32(rand()*1000000000));
 	small_First_Fit  = First_Fit(symptom_set,:,:);
 	small_Second_Fit = Second_Fit(symptom_set,:,:);
 	small_Third_Fit  = Third_Fit(symptom_set,:,:);
@@ -376,6 +385,8 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 end
 % End of Symptom Set
 
-filename = sprintf("./output_full_%d",uint32(rand()*1000000000));
+filename = sprintf("./output_full_%f_%f_%f_%d_%d_%d_%d",...
+	FITNESS_ZERO_LIMIT, CROSSOVER_RATE, MUTATION_RATE, POPULATION_LIMIT,...
+	GENERATION_LIMIT, CROSSOVER_POINTS, uint32(rand()*1000000000));
 save( filename, "First", "Second", "Third");
 
