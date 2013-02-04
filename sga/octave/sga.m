@@ -81,7 +81,7 @@ EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
 
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
-for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
+for symptom_set=7:1:(2^NUMBER_SYMPTOMS)-1
 	printf("Symptom_set: %d\n",symptom_set)
 %	pause(1)
 
@@ -127,7 +127,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 
 % Still more fitness evaluations than necessary
 			for individual=1:1:POPULATION_LIMIT
-				if individual < 2
+				if individual < 2 | generation < 2
 					sin_fit(individual) = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
 				else
 					pre_calc = 0;
