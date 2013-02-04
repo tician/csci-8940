@@ -81,7 +81,7 @@ EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
 
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
-for symptom_set=5:1:(2^NUMBER_SYMPTOMS)-1
+for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 	printf("Symptom_set: %d\n",symptom_set)
 %	pause(1)
 
@@ -132,7 +132,7 @@ for symptom_set=5:1:(2^NUMBER_SYMPTOMS)-1
 				else
 					pre_calc = 0;
 					if population(individual,:) == population(individual-1,:)
-						sin_fit(individual) = sin_fit(iter);
+						sin_fit(individual) = sin_fit(individual-1);
 						pre_calc = 1;
 					else
 						for iter=1:1:individual-1
