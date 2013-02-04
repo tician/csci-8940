@@ -75,7 +75,7 @@ public:
 		else
 			return false;
 	}
-	void splicer (specimen_t* ma, specimen_t* pa)
+	void splicer (specimen_t ma, specimen_t pa, specimen_t* ba, specimen_t* by)
 	{
 		// Crossover loci (0 ~ 24)
 		// boost::uniform_int<int> crossover_point_generator(0,NUMBER_DISEASES-1);
@@ -113,6 +113,28 @@ bool fitness_sorter(specimen_t i, speciment_t j)
 	return (i.fitness<j.fitness);
 }
 
+bool cloned(specimen_t i, specimen_t j)
+{
+	uint32_t iter, match_count=0;
+	for (iter=0; iter<NUMBER_GENES; iter++)
+	{
+		if (i.gene[iter] == j.gene[iter])
+		{
+			match_count++;
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	// If you have 5 matches and I take one away, how many do you have left to light a fire then die in it?
+	//  -- breakerslion (#1221108 http://fstdt.com/QuoteComment.aspx?QID=77098&Page=2)
+	if ( match_count == (NUMBER_GENES-1) )
+		return true;
+
+	return false;
+}
 
 void priorLikelihoodSetup(void)
 {
@@ -128,9 +150,12 @@ void tendencyFix(void)
 	uint32_t iter, jter;
 	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
 	{
-		if (qManifestationInDisease[iter][jter] < ZERO_FITNESS_LIMIT)
+		for (jter=0; jter<NUMBER_GENES; jter++)
 		{
-			qManifestationInDisease[iter][jter] = ZERO_FITNESS_LIMIT;
+			if (qManifestationInDisease[iter][jter] < ZERO_FITNESS_LIMIT)
+			{
+				qManifestationInDisease[iter][jter] = ZERO_FITNESS_LIMIT;
+			}
 		}
 	}
 }

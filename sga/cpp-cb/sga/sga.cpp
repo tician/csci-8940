@@ -75,21 +75,48 @@ int main(void)
 			{
 				// Cycle through the entire population
 				uint32_t individual;
-				__float128 sin_fit[NUMBER_INDIVIDUALS];
+//				__float128 sin_fit[NUMBER_INDIVIDUALS];
 				__float128 sig_fit[NUMBER_INDIVIDUALS];
 				for (individual=0; individual<NUMBER_INDIVIDUALS; individual++)
 				{
-					sin_fit = fitness_function(population[individual],symptom_set);
+
+					if ( (individual < 1) | (generation < 1) )
+					{
+						populi.pop[individual].sin_fit = fitness_function(populi.pop[individual],symptom_set);
+					}
+					else
+					{
+						if (cloned(populi[individual],populi[individual-1]))
+						{
+							populi.pop[individual].sin_fit = populi.pop[individual-1].sin_fit;
+						}
+						else
+						{
+							for (iter=0; iter<individual; iter++)
+							{
+								if (cloned(populi.pop[individual],populi.pop[iter]))
+								{
+									populi.pop[individual].sin_fit = populi.pop[iter].sin_fit;
+									break;
+								}
+							}
+							if (populi.pop[individual].sin_fit < -10)
+							{
+								populi.pop[individual].sin_fit = fitness_function(populi.pop[individual],symptom_set);
+							}
+						}
+					}
+
 
 
 					// Update Sigma Fitness array for roulette wheel selection
 					if (individual > 1)
 					{
-						sig_fit(individual) = sig_fit(individual-1) + sin_fit(individual);
+						sig_fit[individual] = sig_fit[individual-1] + populi.pop[individual].sin_fit;
 					}
 					else
 					{
-						sig_fit(individual) = sin_fit(individual);
+						sig_fit[individual] = populi.pop[individual].sin_fit;
 					}
 
 
@@ -101,85 +128,11 @@ int main(void)
 							FoundOptimum=1;
 						}
 					}
-
-
-					std::vector<speciment_t> vector (, +POPULATION_LIMIT, fitness_sorter);
-
-					if (temp>third_f)
-					{
-						if (temp>second_f)
-						{
-							if (temp>first_f)
-							{
-								third_f = second_f;
-								second_f = first_f;
-								first_f = temp;
-
-								third_g = second_g;
-								second_g = first_g;
-								first_g = generation;
-							}
-							else
-							{
-								third_f = second_f;
-								second_f = temp;
-
-								third_g = second_g;
-								second_g = generation;
-							}
-						}
-						else
-						{
-							third_f = temp;
-
-							third_g = generation;
-						}
-					}
-				}
-				// End of fitness evaluations
-				cout << "Generation: " << generation << "\tFirst: " << first_f << "\t Second: " << second_f << "\t Third: " << third_f << endl;
-
-				// Update First, Second, and Third best fitness values
-				if (first_f > Third[symptom_set-1].fitness)
-				{
-					if (first_f > Second[symptom_set-1].fitness)
-					{
-						if (first_f > First[symptom_set-1].fitness)
-						{
-							First[symptom_set-1].fitness = first_f;
-							First[symptom_set-1].generation = first_g;
-
-							if (second_f > Second[symptom_set-1].fitness)
-							{
-								Second[symptom_set-1].fitness = second_f;
-								Second[symptom_set-1].generation = second_g;
-
-								if (third_f > Third[symptom_set-1].fitness)
-								{
-									Third[symptom_set-1].fitness = third_f;
-									Third[symptom_set-1].generation = third_g;
-								}
-							}
-							else if (second_f > Third[symptom_set-1].fitness)
-							{
-								Third[symptom_set-1].fitness = second_f;
-								Third[symptom_set-1].generation = second_g;
-							}
-						}
-						else
-						{
-							Second[symptom_set-1].fitness = first_f;
-							Second[symptom_set-1].generation = first_g;
-						}
-					}
-					else
-					{
-						Third[symptom_set-1].fitness = first_f;
-						Third[symptom_set-1].generation = first_g;
-					}
 				}
 
 
+//					std::vector<speciment_t> virus (populi.pop, (populi.pop+sizeof(population_t)))
+					std::sort (&populi.pop[0], &populi.pop[NUMBER_INDIVIDUALS], fitness_sorter);
 
 			}
 			// End of Trial
