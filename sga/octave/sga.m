@@ -32,9 +32,9 @@ qPriorLikelihood = priorLikelihoodSetup(NUMBER_DISEASES,qPriorProbability);
 
 TRIAL_LIMIT = 10;
 GENERATION_LIMIT = 30;
-POPULATION_LIMIT = 200;
+POPULATION_LIMIT = 100;
 
-MUTATION_RATE = 0.003;
+MUTATION_RATE = 0.03;
 CROSSOVER_RATE = 0.6;
 CROSSOVER_POINTS = 1;
 
@@ -370,7 +370,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 	end
 	% End of Trial
 	filename = sprintf("./output_%f_%f_%f_%d_%d_%d_%d_%d",...
-		FITNESS_ZERO_LIMIT, CROSSOVER_RATE, MUTATION_RATE, POPULATION_LIMIT,...
+		ZERO_FITNESS_LIMIT, CROSSOVER_RATE, MUTATION_RATE, POPULATION_LIMIT,...
 		GENERATION_LIMIT, CROSSOVER_POINTS, symptom_set, uint32(rand()*1000000000));
 	small_First_Fit  = First_Fit(symptom_set,:,:);
 	small_Second_Fit = Second_Fit(symptom_set,:,:);
@@ -386,7 +386,7 @@ end
 % End of Symptom Set
 
 filename = sprintf("./output_full_%f_%f_%f_%d_%d_%d_%d",...
-	FITNESS_ZERO_LIMIT, CROSSOVER_RATE, MUTATION_RATE, POPULATION_LIMIT,...
+	ZERO_FITNESS_LIMIT, CROSSOVER_RATE, MUTATION_RATE, POPULATION_LIMIT,...
 	GENERATION_LIMIT, CROSSOVER_POINTS, uint32(rand()*1000000000));
 save( filename, "First", "Second", "Third");
 
