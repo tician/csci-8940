@@ -81,7 +81,7 @@ EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
 
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
-for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
+for symptom_set=5:1:(2^NUMBER_SYMPTOMS)-1
 	printf("Symptom_set: %d\n",symptom_set)
 %	pause(1)
 
@@ -124,16 +124,28 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 			individual = 1;
 			sig_fit = zeros(1,POPULATION_LIMIT);
 			sin_fit = zeros(1,POPULATION_LIMIT);
-			
+
+% Still more fitness evaluations than necessary
 			for individual=1:1:POPULATION_LIMIT
-				if individual > 1
-					if population(individual,:)==population(individual-1,:)
-						sin_fit(individual) = sin_fit(individual-1);
+				if individual < 2
+					sin_fit(individual) = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
+				else
+					pre_calc = 0;
+					if population(individual,:) == population(individual-1,:)
+						sin_fit(individual) = sin_fit(iter);
+						pre_calc = 1;
 					else
+						for iter=1:1:individual-1
+							if population(individual,:) == population(iter,:)
+								sin_fit(individual) = sin_fit(iter);
+								pre_calc = 1;
+								break;
+							end
+						end
+					end
+					if pre_calc < 1
 						sin_fit(individual) = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
 					end
-				else
-					sin_fit(individual) = fitness(population(individual,:),symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS);
 				end
 
 				% Update Sigma Fitness array for roulette wheel selection
@@ -152,88 +164,6 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 			end
 			% End of fitness evaluations
 
-%{
-				if ( (sin_fit(individual)>third_f) )%> ZERO_FITNESS_LIMIT )
-					if ( (sin_fit(individual)>second_f) )%> ZERO_FITNESS_LIMIT )
-						if ( (sin_fit(individual)>first_f) )%> ZERO_FITNESS_LIMIT )
-							third_f = second_f;
-							second_f = first_f;
-							first_f = sin_fit(individual);
-
-							third_g = second_g;
-							second_g = first_g;
-							first_g = generation;
-
-							third_i = second_i;
-							second_i = first_i;
-							first_i = population(individual,:);
-						elseif ( abs(sin_fit(individual)-first_f) > ZERO_FITNESS_LIMIT )
-							third_f = second_f;
-							second_f = sin_fit(individual);
-
-							third_g = second_g;
-							second_g = generation;
-
-							third_i = second_i;
-							second_i = population(individual,:);
-						end
-					elseif ( abs(sin_fit(individual)-second_f) > ZERO_FITNESS_LIMIT )
-						third_f = sin_fit(individual);
-
-						third_g = generation;
-
-						third_i = population(individual,:);
-					end
-				end
-			end
-			% End of fitness evaluations
-
-			first_f
-			first_i
-			second_f
-			second_i
-			third_f
-			third_i
-
-%			sin_fit
-%			sig_fit
-
-			% Update First, Second, and Third best fitness values
-			if ( (first_f > Third(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
-				if ( (first_f > Second(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
-					if ( (first_f > First(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
-						First(symptom_set,trial,1) = first_f;
-						First(symptom_set,trial,2) = first_g;
-						First_Pop(symptom_set,trial,:) = first_i;
-
-						if ( (second_f > First(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
-							Second(symptom_set,trial,1) = second_f;
-							Second(symptom_set,trial,2) = second_g;
-							Second_Pop(symptom_set,trial,:) = second_i;
-
-							if ( (third_f > Third(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
-								Third(symptom_set,trial,1) = third_f;
-								Third(symptom_set,trial,2) = third_g;
-								Third_Pop(symptom_set,trial,:) = third_i;
-							end
-						elseif ( (second_f > Third(symptom_set,trial,1)) )%> ZERO_FITNESS_LIMIT )
-							Third(symptom_set,trial,1) = second_f;
-							Third(symptom_set,trial,2) = second_g;
-							Third_Pop(symptom_set,trial,:) = second_i;
-						end
-					else
-						Second(symptom_set,trial,1) = first_f;
-						Second(symptom_set,trial,2) = first_g;
-						Second_Pop(symptom_set,trial,:) = first_i;
-					end
-				else
-					Third(symptom_set,trial,1) = first_f;
-					Third(symptom_set,trial,2) = first_g;
-					Third_Pop(symptom_set,trial,:) = first_i;
-				end
-			end
-			% End of best fitness updates
-%}
 			[sorted_fitnesses,sorted_indices] = sort(sin_fit, 'descend');
 			First_Fit(symptom_set,trial,generation) = sorted_fitnesses(1);
 			First_Pop(symptom_set,trial,generation,:) = population(sorted_indices(1),:);
@@ -261,42 +191,6 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 					end
 				end
 					
-%{
-				% Bisecting search for parent
-				seeker_left = 1;
-				seeker_right = POPULATION_LIMIT;
-				seeker = uint32((seeker_right+seeker_left)/2);
-				% Absolute worst case should be POP_LIMIT/2
-				for iter=1:1:POPULATION_LIMIT
-					if (temp <= sig_fit(seeker))
-						if (seeker>1)
-							if (temp > sig_fit(seeker-1))
-								ma = seeker;
-								break;
-							else
-								seeker_right = seeker;
-								seeker = uint32((seeker_right+seeker_left)/2);
-							end
-						else
-							ma = seeker;
-							break;
-						end
-					else
-						if (seeker < POPULATION_LIMIT)
-							if (temp <= sig_fit(seeker+1))
-								ma = seeker+1;
-								break;
-							else
-								seeker_left = seeker;
-								seeker = uint32((seeker_right+seeker_left)/2);
-							end
-						else
-							ma = seeker;
-							break;
-						end
-					end
-				end
-%}
 				temp = rand()*sig_fit(POPULATION_LIMIT);
 				for iter=1:1:POPULATION_LIMIT
 					if (temp <= sig_fit(iter))
@@ -304,42 +198,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 						break;
 					end
 				end
-%{
-				% Bisecting search for parent
-				seeker_left = 1;
-				seeker_right = POPULATION_LIMIT;
-				seeker = uint32((seeker_right+seeker_left)/2);
-				% Absolute worst case should be POP_LIMIT/2
-				for iter=1:1:POPULATION_LIMIT
-					if (temp <= sig_fit(seeker))
-						if (seeker>1)
-							if (temp > sig_fit(seeker-1))
-								pa = seeker;
-								break;
-							else
-								seeker_right = seeker;
-								seeker = uint32((seeker_right+seeker_left)/2);
-							end
-						else
-							pa = seeker;
-							break;
-						end
-					else
-						if (seeker < POPULATION_LIMIT)
-							if (temp <= sig_fit(seeker+1))
-								pa = seeker+1;
-								break;
-							else
-								seeker_left = seeker;
-								seeker = uint32((seeker_right+seeker_left)/2);
-							end
-						else
-							pa = seeker;
-							break;
-						end
-					end
-				end
-%}
+
 				% Crossover
 				[ba,by] = splicer(population(ma,:), population(pa,:), CROSSOVER_RATE, CROSSOVER_POINTS, NUMBER_DISEASES);
 %				population(ma,:)
