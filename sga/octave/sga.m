@@ -81,7 +81,7 @@ EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
 
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
-for symptom_set=47:1:(2^NUMBER_SYMPTOMS)-1
+for symptom_set=439:1:(2^NUMBER_SYMPTOMS)-1
 	printf("Symptom_set: %d\n",symptom_set)
 %	pause(1)
 
