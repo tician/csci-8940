@@ -9,8 +9,8 @@
 
 clear all;
 more off;
-%format long;
-output_precision(30);
+format long;
+%output_precision(30);
 
 NUMBER_SYMPTOMS = 10;
 NUMBER_DISEASES = 25;
@@ -32,10 +32,12 @@ qPriorLikelihood = priorLikelihoodSetup(NUMBER_DISEASES,qPriorProbability);
 
 TRIAL_LIMIT = 10;
 GENERATION_LIMIT = 30;
-POPULATION_LIMIT = 100;
+POPULATION_LIMIT = 80;
 
-MUTATION_RATE = 0.03;
-CROSSOVER_RATE = 0.6;
+%MUTATION_RATE = 0.3*POPULATION_LIMIT;
+%CROSSOVER_RATE = 0.06*POPULATION_LIMIT;
+MUTATION_RATE = 0.003;
+CROSSOVER_RATE = 0.06;
 CROSSOVER_POINTS = 1;
 
 
@@ -60,6 +62,7 @@ CROSSOVER_POINTS = 1;
 
 % Population
 population = zeros(POPULATION_LIMIT,NUMBER_DISEASES);
+next_population = zeros(POPULATION_LIMIT,NUMBER_DISEASES);
 
 
 
@@ -81,7 +84,7 @@ EvaluationsToOptimum = zeros((2^NUMBER_SYMPTOMS)-1, TRIAL_LIMIT);
 
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
-for symptom_set=439:1:(2^NUMBER_SYMPTOMS)-1
+for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 	printf("Symptom_set: %d\n",symptom_set)
 %	pause(1)
 
@@ -103,14 +106,18 @@ for symptom_set=439:1:(2^NUMBER_SYMPTOMS)-1
 		convergence = 0;
 		generation = 1;
 		for generation=1:1:GENERATION_LIMIT
-			if convergence > 5
+			if convergence > 9
 				printf("   Converged at generation: %d\n", generation-1)
 				break;
 			end
 
+			if (generation>1)
+				population(:) = next_population(:);
+			end
+
 			printf("  Generation: %d\n",generation)
 %			pause(1)
-			population
+%			population
 
 %			clear first_f first_g first_i;
 %			clear second_f second_g second_i;
@@ -170,20 +177,37 @@ for symptom_set=439:1:(2^NUMBER_SYMPTOMS)-1
 			end
 			% End of fitness evaluations
 
-			[sorted_fitnesses,sorted_indices] = sort(sin_fit, 'descend');
-			First_Fit(symptom_set,trial,generation) = sorted_fitnesses(1);
-			First_Pop(symptom_set,trial,generation,:) = population(sorted_indices(1),:);
-			Second_Fit(symptom_set,trial,generation) = sorted_fitnesses(2);
-			Second_Pop(symptom_set,trial,generation,:) = population(sorted_indices(2),:);
-			Third_Fit(symptom_set,trial,generation) = sorted_fitnesses(3);
-			Third_Pop(symptom_set,trial,generation,:) = population(sorted_indices(3),:);
 
-			sorted_fitnesses(1)
-			population(sorted_indices(1),:)
-			sorted_fitnesses(2)
-			population(sorted_indices(2),:)
-			sorted_fitnesses(3)
-			population(sorted_indices(3),:)
+			[sorted_fitnesses, sorted_indices] = unique(sin_fit, 'first');
+
+			[nr,nc] = size(sorted_fitnesses);
+
+			nc
+			First_Fit(symptom_set,trial,generation) = sorted_fitnesses(nc);
+			First_Pop(symptom_set,trial,generation) = population(sorted_indices(nc));
+			if (nc>1)
+				Second_Fit(symptom_set,trial,generation) = sorted_fitnesses(nc-1);
+				Second_Pop(symptom_set,trial,generation) = population(sorted_indices(nc-1));
+			end
+			if (nc>2)
+				Third_Fit(symptom_set,trial,generation) = sorted_fitnesses(nc-2);
+				Third_Pop(symptom_set,trial,generation) = population(sorted_indices(nc-2));
+			end
+
+%			[sorted_fitnesses,sorted_indices] = sort(sin_fit, 'descend');
+%			First_Fit(symptom_set,trial,generation) = sorted_fitnesses(1);
+%			First_Pop(symptom_set,trial,generation,:) = population(sorted_indices(1),:);
+%			Second_Fit(symptom_set,trial,generation) = sorted_fitnesses(2);
+%			Second_Pop(symptom_set,trial,generation,:) = population(sorted_indices(2),:);
+%			Third_Fit(symptom_set,trial,generation) = sorted_fitnesses(3);
+%			Third_Pop(symptom_set,trial,generation,:) = population(sorted_indices(3),:);
+
+%			sorted_fitnesses(1)
+%			population(sorted_indices(1),:)
+%			sorted_fitnesses(2)
+%			population(sorted_indices(2),:)
+%			sorted_fitnesses(3)
+%			population(sorted_indices(3),:)
 
 			if (generation > 4) && (First_Fit(symptom_set,trial,generation) <= First_Fit(symptom_set,trial,generation-1))
 				convergence += 1;
@@ -219,19 +243,30 @@ for symptom_set=439:1:(2^NUMBER_SYMPTOMS)-1
 %				ba
 %				by
 				
-				population(((individual-1)*2)+1,:) = ba;
-				population(((individual-1)*2)+2,:) = by;
+				next_population(((individual-1)*2)+1,:) = ba;
+				next_population(((individual-1)*2)+2,:) = by;
 			end
 			% End of breeding
 
 			% Mutate children
 			for iter=1:1:POPULATION_LIMIT
+%				mutate = mutagen(MUTATION_RATE);
+%				if (mutate>0)
+%						if (bitget(mutate, jter) > 0)
+%							if population(iter,jter) > 0
+%								population(iter,jter) = 0;
+%							else
+%								population(iter,jter) = 1;
+%							end
+%						end
+%					end
+%				end
 				for jter=1:1:NUMBER_DISEASES
 					if mutagen(MUTATION_RATE)
-						if population(iter,jter) > 0
-							population(iter,jter) = 0;
+						if next_population(iter,jter) > 0
+							next_population(iter,jter) = 0;
 						else
-							population(iter,jter) = 1;
+							next_population(iter,jter) = 1;
 						end
 					end
 				end
@@ -239,11 +274,12 @@ for symptom_set=439:1:(2^NUMBER_SYMPTOMS)-1
 			% End of mutation
 		end
 		% End of Generation
+%		sorted_fitnesses(1)
 	end
 	% End of Trial
-	filename = sprintf("./output_%f_%f_%f_%d_%d_%d_%d_%d",...
+	filename = sprintf("./output_%f_%f_%f_%d_%d_%d_%d",... %_%d",...
 		ZERO_FITNESS_LIMIT, CROSSOVER_RATE, MUTATION_RATE, POPULATION_LIMIT,...
-		GENERATION_LIMIT, CROSSOVER_POINTS, symptom_set, uint32(rand()*1000000000));
+		GENERATION_LIMIT, CROSSOVER_POINTS, symptom_set); %, uint32(rand()*1000000000));
 	small_First_Fit  = First_Fit(symptom_set,:,:);
 	small_Second_Fit = Second_Fit(symptom_set,:,:);
 	small_Third_Fit  = Third_Fit(symptom_set,:,:);
@@ -256,9 +292,4 @@ for symptom_set=439:1:(2^NUMBER_SYMPTOMS)-1
 					"small_Third_Fit", "small_Third_Pop");
 end
 % End of Symptom Set
-
-filename = sprintf("./output_full_%f_%f_%f_%d_%d_%d_%d",...
-	ZERO_FITNESS_LIMIT, CROSSOVER_RATE, MUTATION_RATE, POPULATION_LIMIT,...
-	GENERATION_LIMIT, CROSSOVER_POINTS, uint32(rand()*1000000000));
-save( filename, "First", "Second", "Third");
 

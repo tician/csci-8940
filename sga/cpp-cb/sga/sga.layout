@@ -7,10 +7,10 @@
 	<File name="TendencyMatrix10x25.h" open="1" top="0" tabpos="3">
 		<Cursor position="417" topLine="0" />
 	</File>
-	<File name="genie.h" open="1" top="0" tabpos="2">
-		<Cursor position="1657" topLine="22" />
+	<File name="genie.h" open="1" top="1" tabpos="2">
+		<Cursor position="1332" topLine="82" />
 	</File>
-	<File name="sga.cpp" open="1" top="1" tabpos="1">
-		<Cursor position="3425" topLine="101" />
+	<File name="sga.cpp" open="1" top="0" tabpos="1">
+		<Cursor position="4741" topLine="0" />
 	</File>
 </CodeBlocks_layout_file>

@@ -1,15 +1,7 @@
-/*
- * I was really fucking bored and depressed...
- */
-
 
 #include <stdint.h>
 #include <float.h>
 
-#include "TendencyMatrix10x25.h"
-
-//#include <boost/random/mersenne_twister.hpp>
-//#include <boost/random/uniform_int.hpp>
 #include <boost/random.hpp>
 
 #define NUMBER_TRIALS				10
@@ -22,8 +14,6 @@
 #define MUTATION_RATE				0.003
 #define CROSSOVER_RATE				0.1
 #define CROSSOVER_POINTS			1
-
-#define ZERO_FITNESS_LIMIT			1.0e-5
 
 //#define FITNESS_TYPE				__float128
 #define FITNESS_TYPE				double

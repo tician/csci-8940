@@ -5,7 +5,8 @@ function individual = populator(genes)
 
 individual = zeros(1,genes);
 
-diagnosis = uint32( rand()*(2^(genes)-1) );
+%diagnosis = uint32( rand()*(2^(genes)-1) );
+diagnosis = randint(1,1,[0,(2^(genes)-1)]);
 
 for iter=1:1:genes
 	if bitget(diagnosis, iter)

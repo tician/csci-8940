@@ -1,11 +1,8 @@
 
-
-#include "genie.h"
-#include "ExhaustiveResults10x25.h"
-
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <bitset>
 
 using namespace std;
 
@@ -13,12 +10,6 @@ int main(void)
 {
 	randomizers genie;
 	uint32_t iter, jter, kter;
-
-	// Fix tendency values that are less than lower limit
-	tendencyFix();
-
-	// Get PriorLikelihoods
-	priorLikelihoodSetup();
 
 	// Population
 	population_t populi;
