@@ -1,12 +1,5 @@
-%{
-/*
- * I was really fucking bored and depressed...
- */
-%}
 
-function fitness_value = fit_con(diagnosis, symptoms, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS)
-
-ZERO_FITNESS_LIMIT = 1.0e-5;
+function fitness_value = fit_con(diagnosis, symptoms, qPriorLikelihood, qManifestationInDisease, NUMBER_DISEASES, NUMBER_SYMPTOMS, ZERO_FITNESS_LIMIT)
 
 VERBOSE=0;
 
@@ -28,7 +21,12 @@ for iter=1:1:NUMBER_SYMPTOMS
 				temp *= (1.0-qManifestationInDisease(iter,jter));
 			end
 		end
-		L1 *= (1.0-temp);
+%		L1 *= (1.0-temp);
+		if ((1.0-temp)>ZERO_FITNESS_LIMIT)
+			L1 *= (1.0-temp);
+		else
+			L1 *= ZERO_FITNESS_LIMIT;
+		end
 	end
 end
 if VERBOSE
@@ -44,7 +42,12 @@ for iter=1:1:NUMBER_DISEASES
 				temp *= (1.0-qManifestationInDisease(jter,iter));
 			end
 		end
-		L2 *= (temp);
+%		L2 *= (temp);
+		if (temp>ZERO_FITNESS_LIMIT)
+			L2 *= (temp);
+		else
+			L2 *= ZERO_FITNESS_LIMIT;
+		end
 	end
 end
 if VERBOSE

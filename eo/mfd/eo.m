@@ -3,6 +3,12 @@ more off;
 %format long;
 output_precision(30);
 
+ZERO_FITNESS_LIMIT = 1.0e-6;
+NUMBER_SYMPTOMS = 10;
+NUMBER_VARIABLES = 25;
+% Possible Diagnoses: 0 ~ 33 554 431 (2^(25)-1) (None to All)
+
+
 %[qPriorProbability,qManifestationInDisease] = TendencyMatrix10x25;
 %qOptimumDiagnoses = ExhaustiveResults10x25;
 
@@ -18,14 +24,12 @@ output_precision(30);
 
 %load PreFixedManifestationInDisease;
 %load PreComputedPriorLikelihood;
-[qPriorLikelihood,qManifestationInDisease] = TendencyMatrix10x25;
 
-NUMBER_SYMPTOMS = 10;
-NUMBER_VARIABLES = 25;
-% Possible Diagnoses: 0 ~ 33 554 431 (2^(25)-1) (None to All)
+[qPriorLikelihood,qManifestationInDisease] = TendencyMatrix10x25;
+qManifestationInDisease = tendencyFix(qManifestationInDisease, NUMBER_VARIABLES, NUMBER_SYMPTOMS, ZERO_FITNESS_LIMIT);
 
 TRIAL_LIMIT = 20;
-ITERATION_LIMIT = 100; %30 * NUMBER_VARIABLES;
+ITERATION_LIMIT = 50; %30 * NUMBER_VARIABLES;
 
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
@@ -46,7 +50,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 		
 		% Repeat for some number of iterations
 		for iteration=1:1:ITERATION_LIMIT
-			printf("  Iteration: %d\n",iteration)
+%			printf("  Iteration: %d\n",iteration)
 
 			clear sor_fit sor_ind uni_fit;
 			clear curr_var_fit curr_conf_fit;
@@ -54,11 +58,11 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 			curr_var_fit = zeros(1,NUMBER_VARIABLES);
 
 			% Start fitness evaluations
-			curr_var_fit(:) = fit_var(curr_conf(trial,iteration), symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_VARIABLES, NUMBER_SYMPTOMS);
+			curr_var_fit(:) = fit_var(curr_conf(trial,iteration), symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_VARIABLES, NUMBER_SYMPTOMS, ZERO_FITNESS_LIMIT);
 			% End of fitness evaluations
 
-			dec2bin(curr_conf(trial,iteration),NUMBER_VARIABLES)
-			curr_conf_fit = fit_con(curr_conf(trial,iteration), symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_VARIABLES, NUMBER_SYMPTOMS)
+			dec2bin(curr_conf(trial,iteration),NUMBER_VARIABLES);
+			curr_conf_fit = fit_con(curr_conf(trial,iteration), symptom_set, qPriorLikelihood, qManifestationInDisease, NUMBER_VARIABLES, NUMBER_SYMPTOMS, ZERO_FITNESS_LIMIT);
 
 			% Update best configuration and fitness
 			if (curr_conf_fit > best_conf(trial,2))
@@ -72,9 +76,31 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 %				curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1,min_ind) );
 
 				uni_fit = unique(curr_var_fit);
-				if (length(uni_fit) < 2)
+				uni_len = length(uni_fit);
+
+				if (uni_len < 2)
 					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, randint(1,1,[1,NUMBER_VARIABLES]) ) );
-				
+				else
+					indi = ceil(abs(normrnd(0,sqrt(uni_len),1,1)));
+					[sor_fit,sor_ind] = sort(curr_var_fit, 'ascend');
+
+					if (indi > uni_len)
+						perm_ind = randperm(NUMBER_VARIABLES-uni_len);
+						temp_ind = sor_ind;
+						for iter=1:1:indi
+							sor_ind(uni_len+iter+1) = temp_ind(perm_ind(iter));
+						end
+					end
+
+					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, sor_ind( indi )-1 ) );
+
+				end
+
+
+%{
+				if (uni_len < 2)
+					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, randint(1,1,[1,NUMBER_VARIABLES]) ) );
+
 				else
 					[sor_fit,sor_ind] = sort(curr_var_fit, 'ascend');
 				
@@ -82,8 +108,9 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 %					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, sor_ind( ceil(abs(normrnd(0,sqrt(NUMBER_VARIABLES),1,1))) ) ) );
 %					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, sor_ind(1)-1 ) );
 
-					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, sor_ind( ceil(abs(normrnd(0,sqrt(length(uni_fit)),1,1))) )-1 ) );
+					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, sor_ind( ceil(abs(normrnd(0,sqrt(uni_len),1,1))) )-1 ) );
 				end
+%}
 			end
 			% End of Iteration
 		end
@@ -93,9 +120,9 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 	end
 	% End of Symptom Set
 
-	filename = sprintf("./mfd_history_%04d_%d.csv", symptom_set, ITERATION_LIMIT);
+	filename = sprintf("./eo_mfd_history_%04d_%d.csv", symptom_set, ITERATION_LIMIT);
 	csvwrite(filename, curr_conf);
-	filename = sprintf("./mfd_best_%04d_%d.csv", symptom_set, ITERATION_LIMIT);
+	filename = sprintf("./eo_mfd_best_%04d_%d.csv", symptom_set, ITERATION_LIMIT);
 	csvwrite(filename, best_conf);
 end
 
