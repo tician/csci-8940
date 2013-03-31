@@ -1,4 +1,15 @@
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+#ifdef __cplusplus
+}
+#endif
+
+
+
 #define NUMBER_TRIALS				10
 #define NUMBER_GENERATIONS			30
 #define NUMBER_INDIVIDUALS			200
@@ -18,12 +29,14 @@
 #include <iostream>
 #include <sstream>
 #include <bitset>
+#include "opencv2/core/core.hpp"
 
 using namespace std;
+using namespace cv;
 
 int main(void)
 {
-
+	RNG 
 
 
 
