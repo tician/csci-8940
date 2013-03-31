@@ -6,6 +6,7 @@ output_precision(30);
 TRIAL_LIMIT = 20;
 %ITERATION_LIMIT = 50;
 ITERATION_LIMIT = 100;
+ITERATION_LIMIT = 200;
 %ITERATION_LIMIT = 30 * NUMBER_VARIABLES;
 
 ZERO_FITNESS_LIMIT = 1.0e-6;
@@ -105,7 +106,7 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 					if (indi > uni_len)
 						perm_ind = randperm(NUMBER_VARIABLES-uni_len);
 						temp_ind = sor_ind;
-						for iter=1:1:indi+1
+						for iter=1:1:indi
 							sor_ind(uni_len+iter) = temp_ind(perm_ind(iter));
 						end
 					end
