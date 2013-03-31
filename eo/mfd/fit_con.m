@@ -29,11 +29,6 @@ for iter=1:1:NUMBER_SYMPTOMS
 			end
 		end
 		L1 *= (1.0-temp);
-%		if ((1.0-temp)>ZERO_FITNESS_LIMIT)
-%			L1 *= (1.0-temp);
-%		else
-%			L1 *= ZERO_FITNESS_LIMIT;
-%		end
 	end
 end
 if VERBOSE

@@ -17,7 +17,7 @@ for iter=1:1:NUMBER_DISEASES
 		% Positive Likelihood (disease causes symptoms we do have)
 		temp = 1.0;
 		for jter=1:1:NUMBER_SYMPTOMS
-			if bitget(symptoms, jter) > 0
+			if bitget(symptoms, jter) == 1
 				temp *= (1.0-qManifestationInDisease(jter,iter));
 			end
 		end

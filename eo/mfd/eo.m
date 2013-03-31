@@ -1,7 +1,7 @@
 clear all;
 more off;
-format long;
-%output_precision(30);
+%format long;
+output_precision(30);
 
 %[qPriorProbability,qManifestationInDisease] = TendencyMatrix10x25;
 %qOptimumDiagnoses = ExhaustiveResults10x25;
@@ -16,16 +16,16 @@ format long;
 %load PreComputedPriorLikelihood;
 %qPriorLikelihood
 
-load PreFixedManifestationInDisease;
-load PreComputedPriorLikelihood;
-%[qPriorLikelihood,qManifestationInDisease] = TendencyMatrix10x25;
+%load PreFixedManifestationInDisease;
+%load PreComputedPriorLikelihood;
+[qPriorLikelihood,qManifestationInDisease] = TendencyMatrix10x25;
 
 NUMBER_SYMPTOMS = 10;
 NUMBER_VARIABLES = 25;
 % Possible Diagnoses: 0 ~ 33 554 431 (2^(25)-1) (None to All)
 
 TRIAL_LIMIT = 20;
-ITERATION_LIMIT = 30 * NUMBER_VARIABLES;
+ITERATION_LIMIT = 100; %30 * NUMBER_VARIABLES;
 
 % Cycle through all possible symptom sets except healthy
 symptom_set = 1;
@@ -41,16 +41,14 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 		printf(" Trial: %d\n",trial)
 
 		%Generate initial configuration (random)
-		curr_conf(trial,1) = 0; %randint(1,1,[0,(2^(NUMBER_VARIABLES)-1)]);
+		curr_conf(trial,1) = randint(1,1,[0,(2^(NUMBER_VARIABLES)-1)]);
 		best_conf(trial,1) = curr_conf(trial,1);
 		
 		% Repeat for some number of iterations
-		iteration = 1;
-		
 		for iteration=1:1:ITERATION_LIMIT
 			printf("  Iteration: %d\n",iteration)
 
-			clear sorted_fitnesses sorted_indices;
+			clear sor_fit sor_ind uni_fit;
 			clear curr_var_fit curr_conf_fit;
 
 			curr_var_fit = zeros(1,NUMBER_VARIABLES);
@@ -73,20 +71,31 @@ for symptom_set=1:1:(2^NUMBER_SYMPTOMS)-1
 %				[min_fit,min_ind] = min(curr_fit);
 %				curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1,min_ind) );
 
-				[sor_fit,sor_ind] = sort(curr_var_fit, 'ascend');
+				uni_fit = unique(curr_var_fit);
+				if (length(uni_fit) < 2)
+					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, randint(1,1,[1,NUMBER_VARIABLES]) ) );
 				
-%				curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, sor_ind(uint32( (abs(randn())/2) * NUMBER_VARIABLES + 1)) ) );
-				curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, sor_ind( ceil(abs(normrnd(0,sqrt(NUMBER_VARIABLES),1,1))) ) ) );
-			end
+				else
+					[sor_fit,sor_ind] = sort(curr_var_fit, 'ascend');
+				
+%					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, sor_ind(uint32( (abs(randn())/2) * NUMBER_VARIABLES + 1)) ) );
+%					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, sor_ind( ceil(abs(normrnd(0,sqrt(NUMBER_VARIABLES),1,1))) ) ) );
+%					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, sor_ind(1)-1 ) );
 
+					curr_conf(trial,iteration+1) = bitxor( curr_conf(trial,iteration), bitshift(1, sor_ind( ceil(abs(normrnd(0,sqrt(length(uni_fit)),1,1))) )-1 ) );
+				end
+			end
+			% End of Iteration
 		end
-		% End of Iteration
+		% End of Trial
+		dec2bin(best_conf(trial,1),NUMBER_VARIABLES)
+		best_conf(trial,2)
 	end
-	% End of Trial
+	% End of Symptom Set
+
 	filename = sprintf("./mfd_history_%04d_%d.csv", symptom_set, ITERATION_LIMIT);
 	csvwrite(filename, curr_conf);
 	filename = sprintf("./mfd_best_%04d_%d.csv", symptom_set, ITERATION_LIMIT);
 	csvwrite(filename, best_conf);
 end
-% End of Symptom Set
 
