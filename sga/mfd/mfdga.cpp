@@ -41,7 +41,7 @@ typedef struct
 
 
 bool loci_comp (uint32_t i,uint32_t j) { return (i<=j); }
-bool spec_comp (specimen_t i, specimen_t j) { return ((FITNESS_TYPE)i.fit>=(FITNESS_TYPE)j.fit); }
+bool spec_comp (specimen_t i, specimen_t j) { return (i.fit>=j.fit); }
 
 
 class population
@@ -52,7 +52,7 @@ private:
 
 	FITNESS_TYPE sig_fit_[NUMBER_INDIVIDUALS];
 
-	RNG rudi_;
+	RNG* rudi_;
 
 	void roulette(void);
 	void selector(GENO_TYPE&);
@@ -68,7 +68,7 @@ private:
 	specimen_t mutate(specimen_t);
 
 public:
-	population(RNG& rudi) {rudi_ = rudi;}
+	population(RNG* rudi) {rudi_ = rudi;}
 	void populator(void);
 	void breeder(void);
 
@@ -83,28 +83,16 @@ specimen_t population::First (uint32_t gen_index)
 {
 	assert(gen_index<NUMBER_GENERATIONS);
 	return best_[0][gen_index];
-//	if (gen_index<NUMBER_GENERATIONS)
-//		return best_[0][gen_index];
-//	else
-//		return NULL;
 }
 specimen_t population::Second(uint32_t gen_index)
 {
 	assert(gen_index<NUMBER_GENERATIONS);
 	return best_[1][gen_index];
-//	if (gen_index<NUMBER_GENERATIONS)
-//		return best_[1][gen_index];
-//	else
-//		return NULL;
 }
 specimen_t population::Third (uint32_t gen_index)
 {
 	assert(gen_index<NUMBER_GENERATIONS);
 	return best_[2][gen_index];
-//	if (gen_index<NUMBER_GENERATIONS)
-//		return best_[2][gen_index];
-//	else
-//		return NULL;
 }
 
 void population::bestest(void)
@@ -112,17 +100,19 @@ void population::bestest(void)
 	std::vector<specimen_t> punk (pop_, pop_+NUMBER_INDIVIDUALS);
 	std::sort (punk.begin(), punk.end(), spec_comp);
 
-
 	uint32_t iter=0, jter=0;;
 	best_[jter++][generation_] = punk[iter++];
 
 	while( (iter<punk.size()) && (jter<NUMBER_TRACKING) )
 	{
-		if (punk[iter].gen != best_[jter][generation_].gen)
+		if (punk[iter].gen == best_[jter][generation_].gen)
+		{
+			iter++;
+		}
+		else if (punk[iter].gen != best_[jter][generation_].gen)
 		{
 			best_[jter++][generation_] = punk[iter];
 		}
-		iter++;
 	}
 	while (jter<NUMBER_TRACKING)
 	{
@@ -187,7 +177,7 @@ void population::selector(GENO_TYPE& nana)
 {
 	uint32_t iter;
 	// Roulette Wheel Selection
-	FITNESS_TYPE temp = rudi_.uniform(0.0, sig_fit_[NUMBER_INDIVIDUALS-1]);
+	FITNESS_TYPE temp = rudi_->uniform(0.0, (FITNESS_TYPE)sig_fit_[NUMBER_INDIVIDUALS-1]);
 
 	for (iter=0; iter<NUMBER_INDIVIDUALS; iter++)
 	{
@@ -201,7 +191,7 @@ void population::selector(GENO_TYPE& nana)
 
 void population::splicer(GENO_TYPE& mama, GENO_TYPE& papa)
 {
-	// Crossover loci (0 ~ 124)
+	// Crossover loci (0 ~ 24)
 
 	uint32_t iter;
 	uint32_t locus[CROSSOVER_POINTS] = {0};
@@ -211,9 +201,9 @@ void population::splicer(GENO_TYPE& mama, GENO_TYPE& papa)
 
 	for (iter=0; iter<CROSSOVER_POINTS; iter++)
 	{
-		if (rudi_.uniform( 0, (int)(1/CROSSOVER_RATE)) < 1)
+		if (rudi_->uniform( 0, (int)(1/CROSSOVER_RATE)) < 1)
 		{
-			locus[iter] = rudi_.uniform(0, NUMBER_GENES);
+			locus[iter] = rudi_->uniform(0, NUMBER_GENES);
 		}
 	}
 
@@ -316,12 +306,13 @@ void population::calcFitness(specimen_t& indi)
 	}
 
 	indi.fit = (L1 * L2 * L3);
+	cout << "Geno:" << indi.gen << "\tFit:" << indi.fit << endl;
 }
 
 specimen_t population::populate(void)
 {
 	specimen_t indi;
-	indi.gen = rudi_.uniform(0, 2^(NUMBER_DIMENSIONS));
+	indi.gen = rudi_->uniform(0, 2<<(NUMBER_GENES));
 	calcFitness(indi);
 	return indi;
 }
@@ -331,7 +322,7 @@ specimen_t population::mutate(specimen_t indi)
 	uint32_t iter;
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
-		if (rudi_.uniform( 0, (int)(1/MUTATION_RATE) ) < 1)
+		if (rudi_->uniform( 0, (int)(1/MUTATION_RATE) ) < 1)
 		{
 			indi.gen.flip(iter);
 		}
@@ -364,10 +355,14 @@ int main(void)
 	{
 		SymptomSet = symptoms;
 
+		cout << "Symptom set: " << SymptomSet << endl;
+
 		uint32_t trailer_trash;
 		for (trailer_trash=0; trailer_trash<NUMBER_TRIALS; trailer_trash++)
 		{
-			population hoponpop(randi);
+			population hoponpop(&randi);
+
+			cout << "Trial: " << trailer_trash << endl;
 
 			hoponpop.populator();
 
@@ -375,6 +370,7 @@ int main(void)
 			uint32_t generational_recursion;
 			for (generational_recursion=0; generational_recursion<NUMBER_GENERATIONS; generational_recursion++)
 			{
+				cout << "Generation: " << generational_recursion << endl;
 				hoponpop.breeder();
 			}
 
