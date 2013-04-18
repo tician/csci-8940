@@ -1,12 +1,12 @@
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 
 
 
@@ -36,7 +36,7 @@ using namespace cv;
 
 int main(void)
 {
-	RNG 
+	RNG randi
 
 
 

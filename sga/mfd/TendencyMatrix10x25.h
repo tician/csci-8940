@@ -5,14 +5,13 @@
  * the symptom values for the 25 diseases.  Right, there are
  * 25 diseases to consider (32meg total diagnoses).
  *
- * I was really fucking bored and depressed...
  */
 
-#define NUMBER_GENES			25
-#define NUMBER_SYMPTOMS			10
+#define FITNESS_TYPE				double
 
+FITNESS_TYPE qPriorLikelihood[25];
 
-__float128 qPriorProbability[NUMBER_GENES] =
+FITNESS_TYPE qPriorProbability[25] =
 {
 	6.11104586446241e-01,
 	4.21137300981738e-01,
@@ -41,7 +40,7 @@ __float128 qPriorProbability[NUMBER_GENES] =
 	6.97455223508857e-01
 };
 
-__float128 qManifestationInDisease[NUMBER_SYMPTOMS][NUMBER_GENES] =
+FITNESS_TYPE qManifestationInDisease[10][25] =
 {
 	{
 		0.00000000000000e+00,

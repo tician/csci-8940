@@ -7,10 +7,11 @@
  *		Next-Best
  *	}
  *
- * I was really fucking bored and depressed...
  */
 
-__float128 qOptimumDiagnoses[1023][3] =
+#define FITNESS_TYPE				double
+
+FITNESS_TYPE qOptimumDiagnoses[1023][3] =
 {
 	{
 //1
