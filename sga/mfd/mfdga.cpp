@@ -41,7 +41,7 @@ typedef struct
 
 
 bool loci_comp (uint32_t i,uint32_t j) { return (i<=j); }
-bool spec_comp (specimen_t i, specimen_t j) { return (i.fit>=j.fit); }
+bool spec_comp (specimen_t i, specimen_t j) { return (i.fit>j.fit); }
 
 
 class population
@@ -52,7 +52,7 @@ private:
 
 	FITNESS_TYPE sig_fit_[NUMBER_INDIVIDUALS];
 
-	RNG* rudi_;
+	RNG rudi_;
 
 	void roulette(void);
 	void selector(GENO_TYPE&);
@@ -63,12 +63,12 @@ private:
 	void bestest(void);
 
 
-	void calcFitness(specimen_t&);
+	FITNESS_TYPE calcFitness(GENO_TYPE);
 	specimen_t populate(void);
 	specimen_t mutate(specimen_t);
 
 public:
-	population(RNG* rudi) {rudi_ = rudi;}
+	population(RNG& rudi) { rudi_ = rudi;}
 	void populator(void);
 	void breeder(void);
 
@@ -100,19 +100,19 @@ void population::bestest(void)
 	std::vector<specimen_t> punk (pop_, pop_+NUMBER_INDIVIDUALS);
 	std::sort (punk.begin(), punk.end(), spec_comp);
 
-	uint32_t iter=0, jter=0;;
-	best_[jter++][generation_] = punk[iter++];
+	uint32_t jter=0;
+	std::vector<specimen_t>::iterator viter = punk.begin();
+	best_[jter++][generation_] = (*viter);
 
-	while( (iter<punk.size()) && (jter<NUMBER_TRACKING) )
+	while( (viter<punk.end()) && (jter<NUMBER_TRACKING) )
 	{
-		if (punk[iter].gen == best_[jter][generation_].gen)
+		if ((*viter).gen != best_[jter][generation_].gen)
 		{
-			iter++;
+			best_[jter++][generation_] = (*viter);
 		}
-		else if (punk[iter].gen != best_[jter][generation_].gen)
-		{
-			best_[jter++][generation_] = punk[iter];
-		}
+		if (jter>NUMBER_TRACKING)
+			break;
+		viter++;
 	}
 	while (jter<NUMBER_TRACKING)
 	{
@@ -177,7 +177,7 @@ void population::selector(GENO_TYPE& nana)
 {
 	uint32_t iter;
 	// Roulette Wheel Selection
-	FITNESS_TYPE temp = rudi_->uniform(0.0, (FITNESS_TYPE)sig_fit_[NUMBER_INDIVIDUALS-1]);
+	FITNESS_TYPE temp = rudi_.uniform(0.0, (FITNESS_TYPE)sig_fit_[NUMBER_INDIVIDUALS-1]);
 
 	for (iter=0; iter<NUMBER_INDIVIDUALS; iter++)
 	{
@@ -201,9 +201,9 @@ void population::splicer(GENO_TYPE& mama, GENO_TYPE& papa)
 
 	for (iter=0; iter<CROSSOVER_POINTS; iter++)
 	{
-		if (rudi_->uniform( 0, (int)(1/CROSSOVER_RATE)) < 1)
+		if (rudi_.uniform( 0, (int)(1/CROSSOVER_RATE)) < 1)
 		{
-			locus[iter] = rudi_->uniform(0, NUMBER_GENES);
+			locus[iter] = rudi_.uniform(0, NUMBER_GENES);
 		}
 	}
 
@@ -246,7 +246,7 @@ void population::mutator(void)
 	}
 }
 
-void population::calcFitness(specimen_t& indi)
+FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 {
 	FITNESS_TYPE temp = 1.0;
 	FITNESS_TYPE L1 = 1.0;
@@ -262,7 +262,7 @@ void population::calcFitness(specimen_t& indi)
 			temp = 1.0;
 			for (jter=0; jter<NUMBER_GENES; jter++)
 			{
-				if (indi.gen[jter])
+				if (genie[jter])//indi.gen[jter])
 				{
 					temp *= (1.0-qManifestationInDisease[iter][jter]);
 				}
@@ -282,7 +282,7 @@ void population::calcFitness(specimen_t& indi)
 	// Negative Likelihood
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
-		if (indi.gen[iter])
+		if (genie[iter])//indi.gen[iter])
 		{
 			temp = 1.0;
 			for (jter=0; jter<NUMBER_SYMPTOMS; jter++)
@@ -299,21 +299,24 @@ void population::calcFitness(specimen_t& indi)
 	// Prior Likelihood
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
-		if (indi.gen[iter])
+		if (genie[iter])//indi.gen[iter])
 		{
 			L3 *= qPriorLikelihood[iter];
 		}
 	}
 
-	indi.fit = (L1 * L2 * L3);
-	cout << "Geno:" << indi.gen << "\tFit:" << indi.fit << endl;
+//	indi.gen = genie;
+//	indi.fit = (L1 * L2 * L3);
+//	cout << "Geno:" << indi.gen << "\tFit:" << indi.fit << endl;
+//	cout << "Geno: " << genie << "\tFit: " << (L1*L2*L3) << endl;
+	return ((L1*L2*L3));
 }
 
 specimen_t population::populate(void)
 {
 	specimen_t indi;
-	indi.gen = rudi_->uniform(0, 2<<(NUMBER_GENES));
-	calcFitness(indi);
+	indi.gen = rudi_.uniform(0, 2<<(NUMBER_GENES));
+	indi.fit = calcFitness(indi.gen);
 	return indi;
 }
 
@@ -322,26 +325,18 @@ specimen_t population::mutate(specimen_t indi)
 	uint32_t iter;
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
-		if (rudi_->uniform( 0, (int)(1/MUTATION_RATE) ) < 1)
+		if (rudi_.uniform( 0, (int)(1/MUTATION_RATE) ) < 1)
 		{
 			indi.gen.flip(iter);
 		}
 	}
-	calcFitness(indi);
+	indi.fit = calcFitness(indi.gen);
 	return indi;
 }
 
-
-
-
-
-
-
-
-
-int main(void)
+int main(int argc, char** argv)
 {
-	RNG randi (0xF0F0F0F0F0F0F0F0);
+	RNG randi (0xF0F0F0F0);
 
 	uint32_t iter;
 
@@ -360,7 +355,7 @@ int main(void)
 		uint32_t trailer_trash;
 		for (trailer_trash=0; trailer_trash<NUMBER_TRIALS; trailer_trash++)
 		{
-			population hoponpop(&randi);
+			population hoponpop(randi);
 
 			cout << "Trial: " << trailer_trash << endl;
 
@@ -370,8 +365,9 @@ int main(void)
 			uint32_t generational_recursion;
 			for (generational_recursion=0; generational_recursion<NUMBER_GENERATIONS; generational_recursion++)
 			{
-				cout << "Generation: " << generational_recursion << endl;
+//				cout << "Generation: " << generational_recursion << endl;
 				hoponpop.breeder();
+//				cout << "Generation over\n";
 			}
 
 			// Print data to file
