@@ -112,30 +112,23 @@ void population::bestest(void)
 	std::vector<specimen_t> punk (pop_, pop_+NUMBER_INDIVIDUALS);
 	std::sort (punk.begin(), punk.end(), spec_comp);
 
-	std::vector<specimen_t>::iterator it;
-//	it = std::unique(punk.begin(), punk.end());
-//	punk.resize( std::distance(punk.begin(),it) );
 
-//	for (it=loci.begin(); it!=loci.end(); it++)//++it)
-//		std::cout << ' ' << *it;
+	uint32_t iter=0, jter=0;;
+	best_[jter++][generation_] = punk[iter++];
 
-	it = punk.begin();
-
-	best_[0][generation_] = (*it);
-	do
+	while( (iter<punk.size()) && (jter<NUMBER_TRACKING) )
 	{
-		it++;
+		if (punk[iter].gen != best_[jter][generation_].gen)
+		{
+			best_[jter++][generation_] = punk[iter];
+		}
+		iter++;
 	}
-	while( ((*it).gen == best_[0][generation_].gen) && (it<punk.end()) );
-	best_[1][generation_] = (*it);
-	do
+	while (jter<NUMBER_TRACKING)
 	{
-		it++;
+		best_[jter][generation_].gen = 0;
+		best_[jter++][generation_].fit = 0;
 	}
-	while( ((*it).gen == best_[1][generation_].gen) && (it<punk.end()) );
-
-	if (it<punk.end())
-		best_[2][generation_] = (*it);
 }
 
 
