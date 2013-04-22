@@ -19,22 +19,12 @@
 //#define NUMBER_INDIVIDUALS			160
 
 #define NUMBER_TRACKING				3
-#define NUMBER_GENES				25
+#define NUMBER_ATTRIBUTES			25
 #define NUMBER_DIMENSIONS			10
-
-//#define MUTATION_RATE				0.001
-//#define MUTATION_RATE				0.006
-//#define MUTATION_RATE				0.011
-//#define CROSSOVER_RATE				0.4
-//#define CROSSOVER_RATE				0.6
-//#define CROSSOVER_RATE				0.8
-//#define CROSSOVER_POINTS			1
-
-//#define ELISTISM					false
 
 //#define FITNESS_TYPE				__float128
 //#define FITNESS_TYPE				double
-#define GENO_TYPE					bitset<NUMBER_GENES>
+#define GENO_TYPE					bitset<NUMBER_ATTRIBUTES>
 
 #define ZERO_FITNESS_LIMIT			1e-6
 
@@ -48,10 +38,17 @@ bitset<NUMBER_SYMPTOMS> SymptomSet;
 
 typedef struct
 {
+	double pos[NUMBER_ATTRIBUTES];
+	double vel[NUMBER_ATTRIBUTES];
+} particle_t;
+
+typedef struct
+{
 	FITNESS_TYPE	fit;
 	GENO_TYPE		gen;
+	particle_t		curr;
+	particle_t		best;
 } specimen_t;
-
 
 bool loci_comp (uint64_t i,uint64_t j) { return (i<=j); }
 bool spec_comp (specimen_t i, specimen_t j) { return (i.fit>j.fit); }
@@ -61,36 +58,27 @@ bool spec_uniq (specimen_t i, specimen_t j) { return (i.gen==j.gen); }
 class population
 {
 private:
-	specimen_t *pop_;//[NUMBER_INDIVIDUALS];
-	specimen_t **best_;//[NUMBER_TRACKING][NUMBER_GENERATIONS];
-
-	FITNESS_TYPE *sig_fit_;//[NUMBER_INDIVIDUALS];
+	specimen_t *pop_;
+	specimen_t **best_;
 
 	RNG rudi_;
 	uint64_t pop_size_;
-	double mu_r_;
-	double xo_r_;
-	uint64_t xo_p_;
-	bool elitism_;
+	specimen_t best_in_swarm_;
 
-	void roulette(void);
-	void selector(GENO_TYPE&);
-	void splicer(GENO_TYPE&, GENO_TYPE&);
-	void mutator(void);
+	particle_t min_, max_;
+	double cog_, soc_, inertia_;
 
 	uint64_t generation_;
 	void bestest(void);
 
-
+	GENO_TYPE population::discretize(particle_t);
 	FITNESS_TYPE calcFitness(GENO_TYPE);
 	specimen_t populate(void);
-	specimen_t mutate(specimen_t);
 
 public:
-	population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
-//	~population(void);
+	population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia);
 	void populator(void);
-	void breeder(void);
+	void iterate(void);
 
 	specimen_t First (uint64_t);
 	specimen_t Second(uint64_t);
@@ -99,32 +87,23 @@ public:
 	uint64_t Age(void) {return generation_;}
 };
 
-population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism)
+population::population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia)
 {
 	rudi_ = rudi;
 	pop_size_ = pop_size;
-	mu_r_ = mu_r;
-	xo_r_ = xo_r;
-	xo_p_ = xo_p;
-	elitism_ = elitism;
+
+	min_ = min_lim;
+	max_ = max_lim;
+	cog_ = cog;
+	soc_ = soc;
+	inertia_ = inertia;
 
 	pop_ = new specimen_t[pop_size_];
-	sig_fit_ = new FITNESS_TYPE[pop_size_];
 	best_ = new specimen_t*[NUMBER_TRACKING];
 	best_[0] = new specimen_t[NUMBER_GENERATIONS];
 	best_[1] = new specimen_t[NUMBER_GENERATIONS];
 	best_[2] = new specimen_t[NUMBER_GENERATIONS];
 }
-
-//population::~population(void)
-//{
-//	delete[] pop_;
-//	delete[] sig_fit_;
-//	delete[] best_[2];
-//	delete[] best_[1];
-//	delete[] best_[0];
-//	delete[] best_;
-//}
 
 specimen_t population::First (uint64_t gen_index)
 {
@@ -152,15 +131,9 @@ void population::bestest(void)
 	viter = std::unique(punk.begin(), punk.end(), spec_uniq);
 	punk.resize( std::distance(punk.begin(),viter) );
 
-//	for (it=loci.begin(); it!=loci.end(); it++)//++it)
-//		std::cout << ' ' << *it;
-
 	viter = punk.begin();
 
-
-
 	uint64_t jter=0;
-//	std::vector<specimen_t>::iterator viter = punk.begin();
 	best_[jter++][generation_] = (*viter);
 
 	while( (viter<punk.end()) && (jter<NUMBER_TRACKING) )
@@ -178,6 +151,9 @@ void population::bestest(void)
 		best_[jter][generation_].gen = 0;
 		best_[jter++][generation_].fit = 0;
 	}
+
+	if (best_[0][generation_].fit > best_in_swarm_.fit)
+		best_in_swarm_ = best_[0][generation_];
 }
 
 
@@ -194,134 +170,24 @@ void population::populator(void)
 	bestest();
 }
 
-void population::breeder(void)
+void population::iterate(void)
 {
 	GENO_TYPE kiddies[pop_size_];
-	roulette();
 
-	uint64_t iter;
+	uint64_t iter, jter;
 
-	if (elitism_)// && (generation_>0))
-	{
-		for (iter=0; iter<(pop_size_/2)-2; iter++)
-		{
-			GENO_TYPE mama, papa;
-
-			selector(mama);
-			selector(papa);
-			splicer(mama, papa);
-			kiddies[(2*iter)+0] = mama;
-			kiddies[(2*iter)+1] = papa;
-		}
-		kiddies[(2*iter)+0] = best_[0][generation_].gen;
-		kiddies[(2*iter)+1] = best_[0][generation_].gen;
-	}
-	else
-	{
-		for (iter=0; iter<(pop_size_/2); iter++)
-		{
-			GENO_TYPE mama, papa;
-
-			selector(mama);
-			selector(papa);
-			splicer(mama, papa);
-			kiddies[(2*iter)+0] = mama;
-			kiddies[(2*iter)+1] = papa;
-		}
-	}
 	for (iter=0; iter<pop_size_; iter++)
 	{
-		pop_[iter].gen = kiddies[iter];
+		for (jter=0; jter<NUMBER_ATTRIBUTES; jter)
+		{
+			pos_[iter].cur
+
+		}
 	}
-	mutator();
+	kiddies[]
+
 	generation_++;
 	bestest();
-}
-
-void population::roulette(void)
-{
-	// Roulette Wheel Selection
-	uint64_t iter;
-
-	sig_fit_[0] = pop_[0].fit;
-	for (iter=1; iter<pop_size_; iter++)
-	{
-		sig_fit_[iter] = sig_fit_[iter-1] + pop_[iter].fit;
-	}
-}
-
-void population::selector(GENO_TYPE& nana)
-{
-	uint64_t iter;
-	// Roulette Wheel Selection
-	FITNESS_TYPE temp = rudi_.uniform(0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
-
-	for (iter=0; iter<pop_size_; iter++)
-	{
-		if (temp <= sig_fit_[iter])
-		{
-			nana = pop_[iter].gen;
-			break;
-		}
-	}
-}
-
-void population::splicer(GENO_TYPE& mama, GENO_TYPE& papa)
-{
-	// Crossover loci (0 ~ 24)
-
-	uint64_t iter;
-	uint64_t *locus;//[xo_p_] = {0};
-	locus = new uint64_t[xo_p_];
-
-	GENO_TYPE mask;
-	GENO_TYPE ba, by;
-
-	for (iter=0; iter<xo_p_; iter++)
-	{
-		if (rudi_.uniform( 0, (int)(1/xo_r_)) < 1)
-		{
-			locus[iter] = rudi_.uniform(0, NUMBER_GENES);
-		}
-	}
-
-	std::vector<uint64_t> loci (locus, locus+xo_p_);
-	std::sort (loci.begin(), loci.end(), loci_comp);
-
-	std::vector<uint64_t>::iterator it;
-	it = std::unique(loci.begin(), loci.end());
-	loci.resize( std::distance(loci.begin(),it) );
-
-//	for (it=loci.begin(); it!=loci.end(); it++)//++it)
-//		std::cout << ' ' << *it;
-
-	it = loci.begin();
-
-	bool up=true;
-	for (iter=0; iter<xo_p_; iter++)
-	{
-		if ( (iter >= *it) && (it < loci.end()) )
-		{
-			it++;
-			up = ~up;
-		}
-		mask[iter] = up;
-	}
-
-	ba = ( mask & mama) | (~mask & papa) ;
-	by = (~mask & mama) | ( mask & papa) ;
-
-	mama = ba;
-	papa = by;
-}
-
-void population::mutator(void)
-{
-	uint64_t iter;
-	for (iter=0; iter<pop_size_; iter++)
-	{
-		pop_[iter] = mutate(pop_[iter]);
-	}
 }
 
 FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
@@ -338,7 +204,7 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 		if (SymptomSet[iter])
 		{
 			temp = 1.0;
-			for (jter=0; jter<NUMBER_GENES; jter++)
+			for (jter=0; jter<NUMBER_ATTRIBUTES; jter++)
 			{
 				if (genie[jter])//indi.gen[jter])
 				{
@@ -358,7 +224,7 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 	}
 
 	// Negative Likelihood
-	for (iter=0; iter<NUMBER_GENES; iter++)
+	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
 	{
 		if (genie[iter])//indi.gen[iter])
 		{
@@ -375,7 +241,7 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 	}
 
 	// Prior Likelihood
-	for (iter=0; iter<NUMBER_GENES; iter++)
+	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
 	{
 		if (genie[iter])//indi.gen[iter])
 		{
@@ -393,25 +259,24 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 specimen_t population::populate(void)
 {
 	specimen_t indi;
-	indi.gen = rudi_.uniform(0, 1<<(NUMBER_GENES));
+	//indi.gen = rudi_.uniform(0, 1<<(NUMBER_ATTRIBUTES));
+
+	indi.curr = rudi_.uniform(0, 1<<(NUMBER_ATTRIBUTES));
+
+	indi.gen = discretize(indi.curr);
 	indi.fit = calcFitness(indi.gen);
 	return indi;
 }
 
-specimen_t population::mutate(specimen_t indi)
+GENO_TYPE population::discretize(particle_t par)
 {
 	uint64_t iter;
-	for (iter=0; iter<NUMBER_GENES; iter++)
+	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
 	{
-		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
-		{
-			indi.gen.flip(iter);
-		}
+		if (par.curr.pos[iter] > 0.5)
+			par.gen
 	}
-	indi.fit = calcFitness(indi.gen);
-	return indi;
 }
-
 
 
 int main(int argc, char* argv[])
@@ -527,7 +392,7 @@ int main(int argc, char* argv[])
 
 	uint64_t iter;
 
-	for (iter=0; iter<NUMBER_GENES; iter++)
+	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
 	{
 		qPriorLikelihood[iter] = ((qPriorProbability[iter])/(1.0-qPriorProbability[iter]));
 	}
@@ -644,8 +509,8 @@ int main(int argc, char* argv[])
 			for (generational_recursion=0; generational_recursion<NUMBER_GENERATIONS; generational_recursion++)
 			{
 //				cout << "Generation: " << generational_recursion << endl;
-//				hoponpop.breeder();
-				hoponpop->breeder();
+//				hoponpop.iterate();
+				hoponpop->iterate();
 //				cout << "Generation over\n";
 			}
 
