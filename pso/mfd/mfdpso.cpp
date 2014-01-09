@@ -46,8 +46,10 @@ typedef struct
 {
 	FITNESS_TYPE	fit;
 	GENO_TYPE		gen;
-	particle_t		curr;
-	particle_t		best;
+	particle_t		cc;
+
+	FITNESS_TYPE	bf;
+	particle_t		bc;
 } specimen_t;
 
 bool loci_comp (uint64_t i,uint64_t j) { return (i<=j); }
@@ -180,11 +182,19 @@ void population::iterate(void)
 	{
 		for (jter=0; jter<NUMBER_ATTRIBUTES; jter)
 		{
-			pos_[iter].cur
-
+//			pop_[iter].cc[jter].vel = (pop_[iter].cc[jter].vel * inertia_) + (pop_[iter].cc[jter].vel * cog_) + (best_in_swarm_[jter].vel * soc_);
+			pop_[iter].cc[jter].vel = (pop_[iter].cc[jter].vel * inertia_) + (pop_[iter].bc[jter].vel * cog_) + (best_in_swarm_[jter].vel * soc_);
+			pop_[iter].cc[jter].pos = pop_[iter].cc[jter].pos + (pop_[iter].cc[jter].vel * time__)
+		}
+		pop_[iter].gen = discretize(pop_[iter].cc);
+		pop_[iter].fit = calcFitness(pop_[iter].gen);
+		if (pop_[iter].fit > pop_[iter].bf)
+		{
+			pop_[iter].bc = pop_[iter].cc;
+			pop_[iter].bf = pop_[iter].fit;
 		}
 	}
-	kiddies[]
+
 
 	generation_++;
 	bestest();
@@ -261,33 +271,41 @@ specimen_t population::populate(void)
 	specimen_t indi;
 	//indi.gen = rudi_.uniform(0, 1<<(NUMBER_ATTRIBUTES));
 
-	indi.curr = rudi_.uniform(0, 1<<(NUMBER_ATTRIBUTES));
+	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+	{
+		indi.cc.vel[iter] = rudi_.uniform(min_.vel[iter],max_.vel[iter]);
+		indi.cc.pos[iter] = rudi_.uniform(min_.pos[iter],max_.pos[iter]);
+	}
 
-	indi.gen = discretize(indi.curr);
+	indi.gen = discretize(indi.cc);
 	indi.fit = calcFitness(indi.gen);
+	indi.bc = indi.cc;
+	indi.bf = indi.fit;
 	return indi;
 }
 
 GENO_TYPE population::discretize(particle_t par)
 {
+	GENO_TYPE genie;
 	uint64_t iter;
 	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
 	{
-		if (par.curr.pos[iter] > 0.5)
-			par.gen
+		if (par.pos[iter] > 0.5)
+			genie[iter] = 1;
+		else
+			genie[iter] = 0;
 	}
+	return genie;
 }
 
 
 int main(int argc, char* argv[])
 {
 	uint64_t pop_size = 80;
-	double mu_r = 0.001;
-	double xo_r = 0.4;
-	uint64_t xo_p = 1;
-	bool elitism = false;
+	double inertia_r = 0.1;
+	double cog_r = 0.3;
+	double soc_r  = 0.3;
 	uint64_t rng_seed = 0xF0F0F0F0;
-
 
 	double last_tick_count = 0.0;
 
@@ -295,13 +313,12 @@ int main(int argc, char* argv[])
     {
 		po::options_description desc("Allowed options");
 		desc.add_options()
-			("help", "Produce help message")
-			("ps", po::value<uint64_t>(), "Set Population Size")
-			("mr", po::value<double>(), "Set Mutation Rate")
-			("xr", po::value<double>(), "Set Crossover Rate")
-			("xp", po::value<uint64_t>(), "Set Maximum Number of Crossover Points")
-			("el", po::value<bool>(), "Enable Elitism")
-			("rng", po::value<uint64_t>(), "Set RNG seed")
+			("help",								"Produce help message")
+			("popsize",	po::value<uint64_t>(),		"Set Population Size")
+			("interia",	po::value<double>(),		"Set Particle Interia")
+			("cog",		po::value<double>(),		"Set pull of best position of particle")
+			("soc",		po::value<double>(),		"Set pull of best position of swarm")
+			("rng",		po::value<uint64_t>(),		"Set RNG seed")
 		;
 
 		po::variables_map vm;
@@ -314,9 +331,9 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
-		if (vm.count("ps"))
+		if (vm.count("popsize"))
 		{
-			pop_size = vm["ps"].as<uint64_t>();
+			pop_size = vm["popsize"].as<uint64_t>();
 			cout << "Population size was set to " << pop_size << ".\n";
 		}
 		else
@@ -324,45 +341,35 @@ int main(int argc, char* argv[])
 			cout << "Population size was set to default of " << pop_size << ".\n";
 		}
 
-		if (vm.count("mr"))
+		if (vm.count("inertia"))
 		{
-			mu_r = vm["mr"].as<double>();
-			cout << "Mutation rate was set to " << mu_r << ".\n";
+			inertia_r = vm["inertia"].as<double>();
+			cout << "Inertia was set to " << inertia_r << ".\n";
 		}
 		else
 		{
-			cout << "Mutation rate was set to default of " << mu_r << ".\n";
+			cout << "Inertia was set to default of " << inertia_r << ".\n";
 		}
 
-		if (vm.count("xr"))
+		if (vm.count("cog"))
 		{
-			xo_r = vm["xr"].as<double>();
-			cout << "Crossover rate was set to " << xo_r << ".\n";
+			cog_r = vm["cog"].as<double>();
+			cout << "COG was set to " << cog_r << ".\n";
 		}
 		else
 		{
-			cout << "Crossover rate was set to default of " << xo_r << ".\n";
+			cout << "COG was set to default of " << cog_r << ".\n";
 		}
 
 
-		if (vm.count("xp"))
+		if (vm.count("soc"))
 		{
-			xo_p = vm["xp"].as<uint64_t>();
-			cout << "Maximum number of crossover points was set to " << xo_p << ".\n";
+			soc_r = vm["soc"].as<double>();
+			cout << "SOC was set to " << soc_r << ".\n";
 		}
 		else
 		{
-			cout << "Maximum number of crossover points was set to default of " << xo_p << ".\n";
-		}
-
-		if (vm.count("el"))
-		{
-			elitism = vm["el"].as<bool>();
-			cout << "Elitism was set to " << elitism << ".\n";
-		}
-		else
-		{
-			cout << "Elitism was set to default of " << elitism << ".\n";
+			cout << "SOC was set to default of " << soc_r << ".\n";
 		}
 
 
@@ -391,10 +398,17 @@ int main(int argc, char* argv[])
 	RNG randi (rng_seed);
 
 	uint64_t iter;
+	particle_t mini, maxi;
 
 	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
 	{
 		qPriorLikelihood[iter] = ((qPriorProbability[iter])/(1.0-qPriorProbability[iter]));
+
+		mini[iter].pos = 0.0;
+		mini[iter].vel = 0.0;
+
+		maxi[iter].pos = 1.0;
+		maxi[iter].vel = 1.0;
 	}
 
 
@@ -404,10 +418,9 @@ int main(int argc, char* argv[])
 	strstr << "./mfd"
 		<< "_" << pop_size
 		<< "_" << NUMBER_GENERATIONS
-		<< "_" << xo_p
-		<< "_" << xo_r
-		<< "_" << mu_r
-		<< "_" << elitism
+		<< "_" << inertia_r
+		<< "_" << cog_r
+		<< "_" << soc_r
 //			<< "_" << trailer_trash			// Current Trial
 //		<< "_" << SymptomSet
 		<< "_" << "first"
@@ -427,10 +440,9 @@ int main(int argc, char* argv[])
 	strstr << "./mfd"
 		<< "_" << pop_size
 		<< "_" << NUMBER_GENERATIONS
-		<< "_" << xo_p
-		<< "_" << xo_r
-		<< "_" << mu_r
-		<< "_" << elitism
+		<< "_" << inertia_r
+		<< "_" << cog_r
+		<< "_" << soc_r
 //			<< "_" << trailer_trash			// Current Trial
 //		<< "_" << SymptomSet
 		<< "_" << "second"
@@ -449,10 +461,9 @@ int main(int argc, char* argv[])
 	strstr << "./mfd"
 		<< "_" << pop_size
 		<< "_" << NUMBER_GENERATIONS
-		<< "_" << xo_p
-		<< "_" << xo_r
-		<< "_" << mu_r
-		<< "_" << elitism
+		<< "_" << inertia_r
+		<< "_" << cog_r
+		<< "_" << soc_r
 //			<< "_" << trailer_trash			// Current Trial
 //		<< "_" << SymptomSet
 		<< "_" << "third"
@@ -497,7 +508,8 @@ int main(int argc, char* argv[])
 		{
 		// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
 //			population hoponpop(randi, pop_size, mu_r, xo_r, xo_p, elitism);
-			hoponpop = new population(randi, pop_size, mu_r, xo_r, xo_p, elitism);
+//	population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia);
+			hoponpop = new population(randi, pop_size, mini, maxi, cog_r, soc_r, inertia_r);
 
 //			cout << "Trial: " << trailer_trash << endl;
 

@@ -2,12 +2,12 @@
 <CodeBlocks_project_file>
 	<FileVersion major="1" minor="6" />
 	<Project>
-		<Option title="MFD-EO" />
+		<Option title="SIB-GA" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/mfd-eo" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Debug/mfdga" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -16,7 +16,7 @@
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="bin/Release/mfd-eo" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Release/mfdga" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -31,6 +31,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add directory="/opt/opencv/2.4.4/include" />
+			<Add directory="/usr/include/boost" />
 		</Compiler>
 		<Linker>
 			<Add library="/opt/opencv/2.4.4/lib/libopencv_calib3d.so" />
@@ -47,8 +48,9 @@
 			<Add library="/opt/opencv/2.4.4/lib/libopencv_ts.so" />
 			<Add library="/opt/opencv/2.4.4/lib/libopencv_video.so" />
 			<Add library="/opt/opencv/2.4.4/lib/libopencv_videostab.so" />
+			<Add library="/usr/lib/libboost_program_options.so" />
 		</Linker>
-		<Unit filename="mfdeo.cpp" />
+		<Unit filename="sibga.cpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />
