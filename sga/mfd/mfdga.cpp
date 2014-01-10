@@ -377,14 +377,14 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 				}
 			}
 			L1 *= (1.0-temp);
-			if ((1.0-temp)>ZERO_FITNESS_LIMIT)
-			{
-				L1 *= (1.0-temp);
-			}
-			else
-			{
-				L1 *= ZERO_FITNESS_LIMIT;
-			}
+//			if ((1.0-temp)>ZERO_FITNESS_LIMIT)
+//			{
+//				L1 *= (1.0-temp);
+//			}
+//			else
+//			{
+//				L1 *= ZERO_FITNESS_LIMIT;
+//			}
 		}
 	}
 
@@ -564,6 +564,18 @@ int main(int argc, char* argv[])
 		qPriorLikelihood[iter] = ((qPriorProbability[iter])/(1.0-qPriorProbability[iter]));
 	}
 
+	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
+	{
+		uint64_t jter;
+		for (jter=0; jter<NUMBER_GENES; jter++)
+		{
+			if (qManifestationInDisease[iter][jter] < ZERO_FITNESS_LIMIT)
+				qManifestationInDisease[iter][jter] = ZERO_FITNESS_LIMIT;
+		}
+	}
+
+
+
 
 	// Print data to file
 	stringstream strstr (stringstream::in | stringstream::out);
@@ -633,6 +645,11 @@ int main(int argc, char* argv[])
 		cerr << "Unable to open file: " << outname << "\n";
 		return 1;
 	}
+
+	outfileTheFirst.precision(35);
+	outfileTheSecond.precision(35);
+	outfileTheThird.precision(35);
+
 /*
 	outfileTheFirst << "SymptomSet,Trial";
 	outfileTheSecond << "SymptomSet,Trial";
