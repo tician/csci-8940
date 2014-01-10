@@ -42,8 +42,10 @@ typedef struct
 	double vel[NUMBER_ATTRIBUTES];
 } particle_t;
 
-typedef struct
+typedef struct specimen_t
 {
+	specimen_t(void) : fit(0.0), gen(0), bf(0.0) {};
+
 	FITNESS_TYPE	fit;
 	GENO_TYPE		gen;
 	particle_t		cc;
@@ -61,7 +63,8 @@ class population
 {
 private:
 	specimen_t *pop_;
-	specimen_t **best_;
+//	specimen_t **best_;
+	specimen_t *best_;
 
 	RNG rudi_;
 	uint64_t pop_size_;
@@ -82,9 +85,13 @@ public:
 	void populator(void);
 	void iterate(void);
 
-	specimen_t First (uint64_t);
-	specimen_t Second(uint64_t);
-	specimen_t Third (uint64_t);
+//	specimen_t First (uint64_t);
+//	specimen_t Second(uint64_t);
+//	specimen_t Third (uint64_t);
+
+	specimen_t First (void){return best_[0];}
+	specimen_t Second(void){return best_[1];}
+	specimen_t Third (void){return best_[2];}
 
 	uint64_t Age(void) {return generation_;}
 };
@@ -101,12 +108,13 @@ population::population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particl
 	inertia_ = inertia;
 
 	pop_ = new specimen_t[pop_size_];
-	best_ = new specimen_t*[NUMBER_TRACKING];
-	best_[0] = new specimen_t[NUMBER_GENERATIONS];
-	best_[1] = new specimen_t[NUMBER_GENERATIONS];
-	best_[2] = new specimen_t[NUMBER_GENERATIONS];
+//	best_ = new specimen_t*[NUMBER_TRACKING];
+//	best_[0] = new specimen_t[NUMBER_GENERATIONS];
+//	best_[1] = new specimen_t[NUMBER_GENERATIONS];
+//	best_[2] = new specimen_t[NUMBER_GENERATIONS];
+	best_ = new specimen_t[NUMBER_TRACKING];
 }
-
+/*
 specimen_t population::First (uint64_t gen_index)
 {
 	assert(gen_index<NUMBER_GENERATIONS);
@@ -122,6 +130,7 @@ specimen_t population::Third (uint64_t gen_index)
 	assert(gen_index<NUMBER_GENERATIONS);
 	return best_[2][gen_index];
 }
+*/
 
 void population::bestest(void)
 {
@@ -135,6 +144,7 @@ void population::bestest(void)
 
 	viter = punk.begin();
 
+/*
 	uint64_t jter=0;
 	best_[jter++][generation_] = (*viter);
 
@@ -156,6 +166,28 @@ void population::bestest(void)
 
 	if (best_[0][generation_].fit > best_in_swarm_.fit)
 		best_in_swarm_ = best_[0][generation_];
+*/
+	uint64_t jter=0;
+	best_[jter++] = (*viter);
+
+	while( (viter<punk.end()) && (jter<NUMBER_TRACKING) )
+	{
+		if ((*viter).gen != best_[jter].gen)
+		{
+			best_[jter++] = (*viter);
+		}
+		if (jter>NUMBER_TRACKING)
+			break;
+		viter++;
+	}
+	while (jter<NUMBER_TRACKING)
+	{
+		best_[jter].gen = 0;
+		best_[jter++].fit = 0;
+	}
+
+	if (best_[0].fit > best_in_swarm_.fit)
+		best_in_swarm_ = best_[0];
 }
 
 
@@ -202,6 +234,7 @@ void population::iterate(void)
 			pop_[iter].bc = pop_[iter].cc;
 			pop_[iter].bf = pop_[iter].fit;
 		}
+		cout << "ID: " << iter << "\tGEN: " << pop_[iter].gen << endl;
 	}
 
 	generation_++;
@@ -282,8 +315,8 @@ specimen_t population::populate(void)
 
 	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
 	{
-		indi.cc.vel[iter] = rudi_.uniform(min_.vel[iter],max_.vel[iter]);
-		indi.cc.pos[iter] = rudi_.uniform(min_.pos[iter],max_.pos[iter]);
+		indi.cc.vel[iter] = rudi_.uniform((double)min_.vel[iter],(double)max_.vel[iter]);
+		indi.cc.pos[iter] = rudi_.uniform((double)min_.pos[iter],(double)max_.pos[iter]);
 	}
 
 	indi.gen = discretize(indi.cc);
@@ -314,7 +347,8 @@ int main(int argc, char* argv[])
 	double inertia_r = 0.1;
 	double cog_r = 0.3;
 	double soc_r  = 0.3;
-	uint64_t rng_seed = 0xF0F0F0F0;
+//	uint64_t rng_seed = 0xF0F0F0F0;
+//	uint64_t rng_seed = getTickCount();
 
 	double last_tick_count = 0.0;
 
@@ -324,10 +358,10 @@ int main(int argc, char* argv[])
 		desc.add_options()
 			("help",								"Produce help message")
 			("popsize",	po::value<uint64_t>(),		"Set Population Size")
-			("interia",	po::value<double>(),		"Set Particle Interia")
+			("inertia",	po::value<double>(),		"Set Particle Inertia")
 			("cog",		po::value<double>(),		"Set Cognitive effect of particle")
 			("soc",		po::value<double>(),		"Set Social effect of swarm")
-			("rng",		po::value<uint64_t>(),		"Set RNG seed")
+//			("rng",		po::value<uint64_t>(),		"Set RNG seed")
 		;
 
 		po::variables_map vm;
@@ -381,7 +415,7 @@ int main(int argc, char* argv[])
 			cout << "SOC was set to default of " << soc_r << ".\n";
 		}
 
-
+/*
 		if (vm.count("rng"))
 		{
 			rng_seed = vm["rng"].as<uint64_t>();
@@ -391,7 +425,8 @@ int main(int argc, char* argv[])
 		{
 			cout << "OpenCV RNG was seeded with default of " << rng_seed << ".\n";
 		}
-    }
+*/
+	}
 	catch(std::exception& e)
 	{
 		cout << "error: " << e.what() << "\n";
@@ -404,7 +439,7 @@ int main(int argc, char* argv[])
 	}
 
 
-	RNG randi (rng_seed);
+//	RNG randi (rng_seed);
 
 	uint64_t iter;
 	particle_t mini, maxi;
@@ -487,6 +522,7 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+/*
 	outfileTheFirst << "RNG_Seed=" << rng_seed << "\n";
 	outfileTheSecond << "RNG_Seed=" << rng_seed << "\n";
 	outfileTheThird << "RNG_Seed=" << rng_seed << "\n";
@@ -494,6 +530,10 @@ int main(int argc, char* argv[])
 	outfileTheFirst << "SymptomSet,Trial";
 	outfileTheSecond << "SymptomSet,Trial";
 	outfileTheThird << "SymptomSet,Trial";
+*/
+	outfileTheFirst << "RNG_Seed,SymptomSet,Trial";
+	outfileTheSecond << "RNG_Seed,SymptomSet,Trial";
+	outfileTheThird << "RNG_Seed,SymptomSet,Trial";
 
 	for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 	{
@@ -519,42 +559,55 @@ int main(int argc, char* argv[])
 		uint64_t trailer_trash;
 		for (trailer_trash=0; trailer_trash<NUMBER_TRIALS; trailer_trash++)
 		{
+			uint64_t rng_seed = getTickCount();
+			RNG randi (rng_seed);
+
 		// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
 //			population hoponpop(randi, pop_size, mu_r, xo_r, xo_p, elitism);
 //	population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia);
 			hoponpop = new population(randi, pop_size, mini, maxi, cog_r, soc_r, inertia_r);
 
 //			cout << "Trial: " << trailer_trash << endl;
+			if (trailer_trash==0)
+				cout << "Trial: ";
+			cout << trailer_trash;
 
 //			hoponpop.populator();
 			hoponpop->populator();
 
+			specimen_t indiFirst [NUMBER_GENERATIONS];
+			specimen_t indiSecond[NUMBER_GENERATIONS];
+			specimen_t indiThird [NUMBER_GENERATIONS];
 
 			uint64_t generational_recursion;
 			for (generational_recursion=0; generational_recursion<NUMBER_GENERATIONS; generational_recursion++)
 			{
-//				cout << "Generation: " << generational_recursion << endl;
+				cout << "Generation: " << generational_recursion << endl;
 //				hoponpop.iterate();
 				hoponpop->iterate();
-//				cout << "Generation over\n";
+				cout << "Generation over\n";
+
+				indiFirst[generational_recursion] = hoponpop->First ();
+				indiSecond[generational_recursion] = hoponpop->Second();
+				indiThird[generational_recursion] = hoponpop->Third ();
 			}
 
-			specimen_t indiFirst [NUMBER_GENERATIONS];
-			specimen_t indiSecond[NUMBER_GENERATIONS];
-			specimen_t indiThird [NUMBER_GENERATIONS];
+/*
 			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 			{
-//				indiFirst[iter] = hoponpop.First (iter);
-//				indiSecond[iter] = hoponpop.Second(iter);
-//				indiThird[iter] = hoponpop.Third (iter);
+				indiFirst[iter] = hoponpop.First (iter);
+				indiSecond[iter] = hoponpop.Second(iter);
+				indiThird[iter] = hoponpop.Third (iter);
+
 				indiFirst[iter] = hoponpop->First (iter);
 				indiSecond[iter] = hoponpop->Second(iter);
 				indiThird[iter] = hoponpop->Third (iter);
 			}
+*/
 
-			outfileTheFirst << SymptomSet << "," << trailer_trash;
-			outfileTheSecond << SymptomSet << "," << trailer_trash;
-			outfileTheThird << SymptomSet << "," << trailer_trash;
+			outfileTheFirst << rng_seed << "," << SymptomSet << "," << trailer_trash;
+			outfileTheSecond << rng_seed << "," << SymptomSet << "," << trailer_trash;
+			outfileTheThird << rng_seed << "," << SymptomSet << "," << trailer_trash;
 
 			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 			{
@@ -579,6 +632,7 @@ int main(int argc, char* argv[])
 
 			delete hoponpop;
 		}//End of Trial
+		cout << endl;
 
 		outfileTheFirst << "\n";
 		outfileTheSecond << "\n";

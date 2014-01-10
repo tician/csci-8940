@@ -1,67 +1,67 @@
 #!/bin/sh
 
-./mfdga --ps=80 --mr=0.001 --xr=0.4 --el=false
-./mfdga --ps=80 --mr=0.001 --xr=0.4 --el=true
-./mfdga --ps=80 --mr=0.001 --xr=0.6 --el=false
-./mfdga --ps=80 --mr=0.001 --xr=0.6 --el=true
-./mfdga --ps=80 --mr=0.001 --xr=0.8 --el=false
-./mfdga --ps=80 --mr=0.001 --xr=0.8 --el=true
+./mfdpso --popsize=10 --inertia=0.001 --cog=0.4 --soc=0.4
+./mfdpso --popsize=10 --inertia=0.001 --cog=0.4 --soc=0.4
+./mfdpso --popsize=10 --inertia=0.001 --cog=0.6 --soc=0.6
+./mfdpso --popsize=10 --inertia=0.001 --cog=0.6 --soc=0.6
+./mfdpso --popsize=10 --inertia=0.001 --cog=0.8 --soc=0.8
+./mfdpso --popsize=10 --inertia=0.001 --cog=0.8 --soc=0.8
 
-./mfdga --ps=80 --mr=0.007 --xr=0.4 --el=false
-./mfdga --ps=80 --mr=0.007 --xr=0.4 --el=true
-./mfdga --ps=80 --mr=0.007 --xr=0.6 --el=false
-./mfdga --ps=80 --mr=0.007 --xr=0.6 --el=true
-./mfdga --ps=80 --mr=0.007 --xr=0.8 --el=false
-./mfdga --ps=80 --mr=0.007 --xr=0.8 --el=true
+./mfdpso --popsize=10 --inertia=0.007 --cog=0.4 --soc=0.4
+./mfdpso --popsize=10 --inertia=0.007 --cog=0.4 --soc=0.4
+./mfdpso --popsize=10 --inertia=0.007 --cog=0.6 --soc=0.6
+./mfdpso --popsize=10 --inertia=0.007 --cog=0.6 --soc=0.6
+./mfdpso --popsize=10 --inertia=0.007 --cog=0.8 --soc=0.8
+./mfdpso --popsize=10 --inertia=0.007 --cog=0.8 --soc=0.8
 
-./mfdga --ps=80 --mr=0.011 --xr=0.4 --el=false
-./mfdga --ps=80 --mr=0.011 --xr=0.4 --el=true
-./mfdga --ps=80 --mr=0.011 --xr=0.6 --el=false
-./mfdga --ps=80 --mr=0.011 --xr=0.6 --el=true
-./mfdga --ps=80 --mr=0.011 --xr=0.8 --el=false
-./mfdga --ps=80 --mr=0.011 --xr=0.8 --el=true
-
-
-./mfdga --ps=120 --mr=0.001 --xr=0.4 --el=false
-./mfdga --ps=120 --mr=0.001 --xr=0.4 --el=true
-./mfdga --ps=120 --mr=0.001 --xr=0.6 --el=false
-./mfdga --ps=120 --mr=0.001 --xr=0.6 --el=true
-./mfdga --ps=120 --mr=0.001 --xr=0.8 --el=false
-./mfdga --ps=120 --mr=0.001 --xr=0.8 --el=true
-
-./mfdga --ps=120 --mr=0.007 --xr=0.4 --el=false
-./mfdga --ps=120 --mr=0.007 --xr=0.4 --el=true
-./mfdga --ps=120 --mr=0.007 --xr=0.6 --el=false
-./mfdga --ps=120 --mr=0.007 --xr=0.6 --el=true
-./mfdga --ps=120 --mr=0.007 --xr=0.8 --el=false
-./mfdga --ps=120 --mr=0.007 --xr=0.8 --el=true
-
-./mfdga --ps=120 --mr=0.011 --xr=0.4 --el=false
-./mfdga --ps=120 --mr=0.011 --xr=0.4 --el=true
-./mfdga --ps=120 --mr=0.011 --xr=0.6 --el=false
-./mfdga --ps=120 --mr=0.011 --xr=0.6 --el=true
-./mfdga --ps=120 --mr=0.011 --xr=0.8 --el=false
-./mfdga --ps=120 --mr=0.011 --xr=0.8 --el=true
+./mfdpso --popsize=10 --inertia=0.011 --cog=0.4 --soc=0.4
+./mfdpso --popsize=10 --inertia=0.011 --cog=0.4 --soc=0.4
+./mfdpso --popsize=10 --inertia=0.011 --cog=0.6 --soc=0.6
+./mfdpso --popsize=10 --inertia=0.011 --cog=0.6 --soc=0.6
+./mfdpso --popsize=10 --inertia=0.011 --cog=0.8 --soc=0.8
+./mfdpso --popsize=10 --inertia=0.011 --cog=0.8 --soc=0.8
 
 
-./mfdga --ps=160 --mr=0.001 --xr=0.4 --el=false
-./mfdga --ps=160 --mr=0.001 --xr=0.4 --el=true
-./mfdga --ps=160 --mr=0.001 --xr=0.6 --el=false
-./mfdga --ps=160 --mr=0.001 --xr=0.6 --el=true
-./mfdga --ps=160 --mr=0.001 --xr=0.8 --el=false
-./mfdga --ps=160 --mr=0.001 --xr=0.8 --el=true
+./mfdpso --popsize=20 --inertia=0.001 --cog=0.4 --soc=0.4
+./mfdpso --popsize=20 --inertia=0.001 --cog=0.4 --soc=0.4
+./mfdpso --popsize=20 --inertia=0.001 --cog=0.6 --soc=0.6
+./mfdpso --popsize=20 --inertia=0.001 --cog=0.6 --soc=0.6
+./mfdpso --popsize=20 --inertia=0.001 --cog=0.8 --soc=0.8
+./mfdpso --popsize=20 --inertia=0.001 --cog=0.8 --soc=0.8
 
-./mfdga --ps=160 --mr=0.007 --xr=0.4 --el=false
-./mfdga --ps=160 --mr=0.007 --xr=0.4 --el=true
-./mfdga --ps=160 --mr=0.007 --xr=0.6 --el=false
-./mfdga --ps=160 --mr=0.007 --xr=0.6 --el=true
-./mfdga --ps=160 --mr=0.007 --xr=0.8 --el=false
-./mfdga --ps=160 --mr=0.007 --xr=0.8 --el=true
+./mfdpso --popsize=20 --inertia=0.007 --cog=0.4 --soc=0.4
+./mfdpso --popsize=20 --inertia=0.007 --cog=0.4 --soc=0.4
+./mfdpso --popsize=20 --inertia=0.007 --cog=0.6 --soc=0.6
+./mfdpso --popsize=20 --inertia=0.007 --cog=0.6 --soc=0.6
+./mfdpso --popsize=20 --inertia=0.007 --cog=0.8 --soc=0.8
+./mfdpso --popsize=20 --inertia=0.007 --cog=0.8 --soc=0.8
 
-./mfdga --ps=160 --mr=0.011 --xr=0.4 --el=false
-./mfdga --ps=160 --mr=0.011 --xr=0.4 --el=true
-./mfdga --ps=160 --mr=0.011 --xr=0.6 --el=false
-./mfdga --ps=160 --mr=0.011 --xr=0.6 --el=true
-./mfdga --ps=160 --mr=0.011 --xr=0.8 --el=false
-./mfdga --ps=160 --mr=0.011 --xr=0.8 --el=true
+./mfdpso --popsize=20 --inertia=0.011 --cog=0.4 --soc=0.4
+./mfdpso --popsize=20 --inertia=0.011 --cog=0.4 --soc=0.4
+./mfdpso --popsize=20 --inertia=0.011 --cog=0.6 --soc=0.6
+./mfdpso --popsize=20 --inertia=0.011 --cog=0.6 --soc=0.6
+./mfdpso --popsize=20 --inertia=0.011 --cog=0.8 --soc=0.8
+./mfdpso --popsize=20 --inertia=0.011 --cog=0.8 --soc=0.8
+
+
+./mfdpso --popsize=60 --inertia=0.001 --cog=0.4 --soc=0.4
+./mfdpso --popsize=60 --inertia=0.001 --cog=0.4 --soc=0.4
+./mfdpso --popsize=60 --inertia=0.001 --cog=0.6 --soc=0.6
+./mfdpso --popsize=60 --inertia=0.001 --cog=0.6 --soc=0.6
+./mfdpso --popsize=60 --inertia=0.001 --cog=0.8 --soc=0.8
+./mfdpso --popsize=60 --inertia=0.001 --cog=0.8 --soc=0.8
+
+./mfdpso --popsize=60 --inertia=0.007 --cog=0.4 --soc=0.4
+./mfdpso --popsize=60 --inertia=0.007 --cog=0.4 --soc=0.4
+./mfdpso --popsize=60 --inertia=0.007 --cog=0.6 --soc=0.6
+./mfdpso --popsize=60 --inertia=0.007 --cog=0.6 --soc=0.6
+./mfdpso --popsize=60 --inertia=0.007 --cog=0.8 --soc=0.8
+./mfdpso --popsize=60 --inertia=0.007 --cog=0.8 --soc=0.8
+
+./mfdpso --popsize=60 --inertia=0.011 --cog=0.4 --soc=0.4
+./mfdpso --popsize=60 --inertia=0.011 --cog=0.4 --soc=0.4
+./mfdpso --popsize=60 --inertia=0.011 --cog=0.6 --soc=0.6
+./mfdpso --popsize=60 --inertia=0.011 --cog=0.6 --soc=0.6
+./mfdpso --popsize=60 --inertia=0.011 --cog=0.8 --soc=0.8
+./mfdpso --popsize=60 --inertia=0.011 --cog=0.8 --soc=0.8
 
