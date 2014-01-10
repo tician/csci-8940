@@ -3,6 +3,7 @@
 #include <sstream>
 #include <bitset>
 #include "opencv2/core/core.hpp"
+#include <cmath>
 
 #include <algorithm>
 #include <vector>
@@ -13,7 +14,7 @@
 
 
 #define NUMBER_TRIALS				10
-#define NUMBER_GENERATIONS			30
+#define NUMBER_GENERATIONS			300
 //#define NUMBER_INDIVIDUALS			80
 //#define NUMBER_INDIVIDUALS			120
 //#define NUMBER_INDIVIDUALS			160
@@ -92,6 +93,8 @@ public:
 	specimen_t First (void){return best_[0];}
 	specimen_t Second(void){return best_[1];}
 	specimen_t Third (void){return best_[2];}
+
+	specimen_t BestInSwarm(void){return best_in_swarm_;}
 
 	uint64_t Age(void) {return generation_;}
 };
@@ -214,20 +217,34 @@ void population::iterate(void)
 	{
 		for (jter=0; jter<NUMBER_ATTRIBUTES; jter++)
 		{
+			pop_[iter].cc.vel[jter] =	(pop_[iter].cc.vel[jter] * inertia_)
+				+ ( (rudi_.uniform((double)0.0,(double)1.0) * cog_) * (pop_[iter].bc.pos[jter]     - pop_[iter].cc.pos[jter]) )
+				+ ( (rudi_.uniform((double)0.0,(double)1.0) * soc_) * (best_in_swarm_.cc.pos[jter] - pop_[iter].cc.pos[jter]) );
+
 //			pop_[iter].cc[jter].vel = (pop_[iter].cc[jter].vel * inertia_) + (pop_[iter].cc[jter].vel * cog_) + (best_in_swarm_[jter].vel * soc_);
-			pop_[iter].cc.vel[jter] = (pop_[iter].cc.vel[jter] * inertia_) + (pop_[iter].bc.vel[jter] * cog_) + (best_in_swarm_.cc.vel[jter] * soc_);
 			if (pop_[iter].cc.vel[jter] > max_.vel[jter])
 				pop_[iter].cc.vel[jter] = max_.vel[jter];
 			else if (pop_[iter].cc.vel[jter] < min_.vel[jter])
 				pop_[iter].cc.vel[jter] = min_.vel[jter];
 
-			pop_[iter].cc.pos[jter] = pop_[iter].cc.pos[jter] + (pop_[iter].cc.vel[jter] * 1.0);//time__);
-			if (pop_[iter].cc.pos[jter] > max_.pos[jter])
-				pop_[iter].cc.pos[jter] = max_.pos[jter];
-			else if (pop_[iter].cc.pos[jter] < min_.pos[jter])
-				pop_[iter].cc.pos[jter] = min_.pos[jter];
+//			pop_[iter].cc.pos[jter] = pop_[iter].cc.pos[jter] + (pop_[iter].cc.vel[jter] * 1.0);//time__);
+//			if (pop_[iter].cc.pos[jter] > max_.pos[jter])
+//				pop_[iter].cc.pos[jter] = max_.pos[jter];
+//			else if (pop_[iter].cc.pos[jter] < min_.pos[jter])
+//				pop_[iter].cc.pos[jter] = min_.pos[jter];
+
+			if ( rudi_.uniform((double)0.0,(double)1.0) < (double)( 1.0/ (1.0+exp(pop_[iter].cc.vel[jter] * -1.0)) ) )
+			{
+				pop_[iter].cc.pos[jter] = 1.0;
+				pop_[iter].gen[jter] = 1;
+			}
+			else
+			{
+				pop_[iter].cc.pos[jter] = 0.0;
+				pop_[iter].gen[jter] = 0;
+			}
 		}
-		pop_[iter].gen = discretize(pop_[iter].cc);
+//		pop_[iter].gen = discretize(pop_[iter].cc);
 		pop_[iter].fit = calcFitness(pop_[iter].gen);
 		if (pop_[iter].fit > pop_[iter].bf)
 		{
@@ -451,8 +468,8 @@ int main(int argc, char* argv[])
 		mini.pos[iter] = 0.0;
 		maxi.pos[iter] = 1.0;
 
-		mini.vel[iter] = -1.0;
-		maxi.vel[iter] = 1.0;
+		mini.vel[iter] = -4.0;
+		maxi.vel[iter] = 4.0;
 	}
 
 
@@ -522,6 +539,28 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+
+	strstr.clear();	strstr.str("");
+	strstr << "./mfd_best"
+		<< "_" << pop_size
+		<< "_" << NUMBER_GENERATIONS
+		<< "_" << inertia_r
+		<< "_" << cog_r
+		<< "_" << soc_r
+//			<< "_" << trailer_trash			// Current Trial
+//		<< "_" << SymptomSet
+		<< ".csv";
+	outname = strstr.str();
+	ofstream outfileTheBest;
+	outfileTheBest.open( outname.c_str() );
+
+	if ( !outfileTheBest.is_open() )
+	{
+		cerr << "Unable to open file: " << outname << "\n";
+		return 1;
+	}
+	outfileTheBest.precision(35);
+
 /*
 	outfileTheFirst << "RNG_Seed=" << rng_seed << "\n";
 	outfileTheSecond << "RNG_Seed=" << rng_seed << "\n";
@@ -534,6 +573,7 @@ int main(int argc, char* argv[])
 	outfileTheFirst << "RNG_Seed,SymptomSet,Trial";
 	outfileTheSecond << "RNG_Seed,SymptomSet,Trial";
 	outfileTheThird << "RNG_Seed,SymptomSet,Trial";
+	outfileTheBest << "RNG_Seed,SymptomSet,Trial,Genotype,Fitness";
 
 	for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 	{
@@ -601,6 +641,8 @@ int main(int argc, char* argv[])
 				indiThird[iter] = hoponpop->Third (iter);
 			}
 */
+			specimen_t bestinswarm = hoponpop->BestInSwarm();
+			outfileTheBest << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash << "," << bestinswarm.gen << "," << bestinswarm.fit;
 
 			outfileTheFirst << rng_seed << "," << SymptomSet << "," << trailer_trash;
 			outfileTheSecond << rng_seed << "," << SymptomSet << "," << trailer_trash;
@@ -634,10 +676,12 @@ int main(int argc, char* argv[])
 		outfileTheFirst << "\n";
 		outfileTheSecond << "\n";
 		outfileTheThird << "\n";
+		outfileTheBest << "\n";
 
 		outfileTheFirst.flush();
 		outfileTheSecond.flush();
 		outfileTheThird.flush();
+		outfileTheBest.flush();
 
 		cout << "\tProcessing time: " << ((double) getTickCount() - last_tick_count)/getTickFrequency() << "[s]\n";
 
@@ -645,6 +689,7 @@ int main(int argc, char* argv[])
 	outfileTheFirst.close();
 	outfileTheSecond.close();
 	outfileTheThird.close();
+	outfileTheBest.close();
 
 	return 0;
 }

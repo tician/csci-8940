@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <CodeBlocks_layout_file>
-	<ActiveTarget name="Debug" />
+	<ActiveTarget name="Release" />
 	<File name="ExhaustiveResults10x25.h" open="0" top="0" tabpos="0">
-		<Cursor position="285" topLine="12" />
+		<Cursor position="362" topLine="15" />
 	</File>
 	<File name="TendencyMatrix10x25.h" open="0" top="0" tabpos="0">
 		<Cursor position="383" topLine="0" />
 	</File>
-	<File name="mfdpso.cpp" open="0" top="0" tabpos="0">
-		<Cursor position="14589" topLine="603" />
+	<File name="mfdpso.cpp" open="1" top="1" tabpos="0">
+		<Cursor position="12791" topLine="557" />
 	</File>
 </CodeBlocks_layout_file>
