@@ -234,7 +234,7 @@ void population::iterate(void)
 			pop_[iter].bc = pop_[iter].cc;
 			pop_[iter].bf = pop_[iter].fit;
 		}
-		cout << "ID: " << iter << "\tGEN: " << pop_[iter].gen << endl;
+//		cout << "ID: " << iter << "\tGEN: " << pop_[iter].gen << endl;
 	}
 
 	generation_++;
@@ -562,15 +562,13 @@ int main(int argc, char* argv[])
 			uint64_t rng_seed = getTickCount();
 			RNG randi (rng_seed);
 
-		// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
-//			population hoponpop(randi, pop_size, mu_r, xo_r, xo_p, elitism);
-//	population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia);
+		// population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia);
 			hoponpop = new population(randi, pop_size, mini, maxi, cog_r, soc_r, inertia_r);
 
 //			cout << "Trial: " << trailer_trash << endl;
 			if (trailer_trash==0)
 				cout << "Trial: ";
-			cout << trailer_trash;
+			cout << trailer_trash << " ";
 
 //			hoponpop.populator();
 			hoponpop->populator();
@@ -582,10 +580,10 @@ int main(int argc, char* argv[])
 			uint64_t generational_recursion;
 			for (generational_recursion=0; generational_recursion<NUMBER_GENERATIONS; generational_recursion++)
 			{
-				cout << "Generation: " << generational_recursion << endl;
+//				cout << "Generation: " << generational_recursion << endl;
 //				hoponpop.iterate();
 				hoponpop->iterate();
-				cout << "Generation over\n";
+//				cout << "Generation over\n";
 
 				indiFirst[generational_recursion] = hoponpop->First ();
 				indiSecond[generational_recursion] = hoponpop->Second();
@@ -595,10 +593,9 @@ int main(int argc, char* argv[])
 /*
 			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 			{
-				indiFirst[iter] = hoponpop.First (iter);
-				indiSecond[iter] = hoponpop.Second(iter);
-				indiThird[iter] = hoponpop.Third (iter);
-
+//				indiFirst[iter] = hoponpop.First (iter);
+//				indiSecond[iter] = hoponpop.Second(iter);
+//				indiThird[iter] = hoponpop.Third (iter);
 				indiFirst[iter] = hoponpop->First (iter);
 				indiSecond[iter] = hoponpop->Second(iter);
 				indiThird[iter] = hoponpop->Third (iter);
@@ -615,9 +612,9 @@ int main(int argc, char* argv[])
 				outfileTheSecond << "," << indiSecond[iter].gen;
 				outfileTheThird << "," << indiThird[iter].gen;
 			}
-			outfileTheFirst << "\n" << SymptomSet << "," << trailer_trash;
-			outfileTheSecond << "\n" << SymptomSet << "," << trailer_trash;
-			outfileTheThird << "\n" << SymptomSet << "," << trailer_trash;
+			outfileTheFirst << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
+			outfileTheSecond << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
+			outfileTheThird << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
 
 
 			for (iter=0; iter<NUMBER_GENERATIONS; iter++)

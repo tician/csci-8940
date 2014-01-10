@@ -62,7 +62,8 @@ class population
 {
 private:
 	specimen_t *pop_;//[NUMBER_INDIVIDUALS];
-	specimen_t **best_;//[NUMBER_TRACKING][NUMBER_GENERATIONS];
+//	specimen_t **best_;//[NUMBER_TRACKING][NUMBER_GENERATIONS];
+	specimen_t *best_;
 
 	FITNESS_TYPE *sig_fit_;//[NUMBER_INDIVIDUALS];
 
@@ -91,10 +92,14 @@ public:
 //	~population(void);
 	void populator(void);
 	void breeder(void);
-
+/*
 	specimen_t First (uint64_t);
 	specimen_t Second(uint64_t);
 	specimen_t Third (uint64_t);
+*/
+	specimen_t First (void){return best_[0];}
+	specimen_t Second(void){return best_[1];}
+	specimen_t Third (void){return best_[2];}
 
 	uint64_t Age(void) {return generation_;}
 };
@@ -110,10 +115,13 @@ population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, u
 
 	pop_ = new specimen_t[pop_size_];
 	sig_fit_ = new FITNESS_TYPE[pop_size_];
+/*
 	best_ = new specimen_t*[NUMBER_TRACKING];
 	best_[0] = new specimen_t[NUMBER_GENERATIONS];
 	best_[1] = new specimen_t[NUMBER_GENERATIONS];
 	best_[2] = new specimen_t[NUMBER_GENERATIONS];
+*/
+	best_ = new specimen_t[NUMBER_TRACKING];
 }
 
 //population::~population(void)
@@ -125,7 +133,7 @@ population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, u
 //	delete[] best_[0];
 //	delete[] best_;
 //}
-
+/*
 specimen_t population::First (uint64_t gen_index)
 {
 	assert(gen_index<NUMBER_GENERATIONS);
@@ -141,6 +149,7 @@ specimen_t population::Third (uint64_t gen_index)
 	assert(gen_index<NUMBER_GENERATIONS);
 	return best_[2][gen_index];
 }
+*/
 
 void population::bestest(void)
 {
@@ -158,7 +167,7 @@ void population::bestest(void)
 	viter = punk.begin();
 
 
-
+/*
 	uint64_t jter=0;
 //	std::vector<specimen_t>::iterator viter = punk.begin();
 	best_[jter++][generation_] = (*viter);
@@ -177,6 +186,26 @@ void population::bestest(void)
 	{
 		best_[jter][generation_].gen = 0;
 		best_[jter++][generation_].fit = 0;
+	}
+*/
+
+	uint64_t jter=0;
+	best_[jter++] = (*viter);
+
+	while( (viter<punk.end()) && (jter<NUMBER_TRACKING) )
+	{
+		if ((*viter).gen != best_[jter].gen)
+		{
+			best_[jter++] = (*viter);
+		}
+		if (jter>NUMBER_TRACKING)
+			break;
+		viter++;
+	}
+	while (jter<NUMBER_TRACKING)
+	{
+		best_[jter].gen = 0;
+		best_[jter++].fit = 0;
 	}
 }
 
@@ -213,8 +242,10 @@ void population::breeder(void)
 			kiddies[(2*iter)+0] = mama;
 			kiddies[(2*iter)+1] = papa;
 		}
-		kiddies[(2*iter)+0] = best_[0][generation_].gen;
-		kiddies[(2*iter)+1] = best_[0][generation_].gen;
+//		kiddies[(2*iter)+0] = best_[0][generation_].gen;
+//		kiddies[(2*iter)+1] = best_[0][generation_].gen;
+		kiddies[(2*iter)+0] = best_[0].gen;
+		kiddies[(2*iter)+1] = best_[0].gen;
 	}
 	else
 	{
@@ -254,7 +285,7 @@ void population::selector(GENO_TYPE& nana)
 {
 	uint64_t iter;
 	// Roulette Wheel Selection
-	FITNESS_TYPE temp = rudi_.uniform(0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
+	FITNESS_TYPE temp = rudi_.uniform((FITNESS_TYPE)0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
 
 	for (iter=0; iter<pop_size_; iter++)
 	{
@@ -421,7 +452,7 @@ int main(int argc, char* argv[])
 	double xo_r = 0.4;
 	uint64_t xo_p = 1;
 	bool elitism = false;
-	uint64_t rng_seed = 0xF0F0F0F0;
+//	uint64_t rng_seed = 0xF0F0F0F0;
 
 
 	double last_tick_count = 0.0;
@@ -436,7 +467,7 @@ int main(int argc, char* argv[])
 			("xr",		po::value<double>(),		"Set Crossover Rate")
 			("xp",		po::value<uint64_t>(),		"Set Maximum Number of Crossover Points")
 			("el",		po::value<bool>(),			"Enable Elitism")
-			("rng",		po::value<uint64_t>(),		"Set RNG seed")
+//			("rng",		po::value<uint64_t>(),		"Set RNG seed")
 		;
 
 		po::variables_map vm;
@@ -500,7 +531,7 @@ int main(int argc, char* argv[])
 			cout << "Elitism was set to default of " << elitism << ".\n";
 		}
 
-
+/*
 		if (vm.count("rng"))
 		{
 			rng_seed = vm["rng"].as<uint64_t>();
@@ -510,7 +541,8 @@ int main(int argc, char* argv[])
 		{
 			cout << "OpenCV RNG was seeded with default of " << rng_seed << ".\n";
 		}
-    }
+*/
+	}
 	catch(std::exception& e)
 	{
 		cout << "error: " << e.what() << "\n";
@@ -523,7 +555,7 @@ int main(int argc, char* argv[])
 	}
 
 
-	RNG randi (rng_seed);
+//	RNG randi (rng_seed);
 
 	uint64_t iter;
 
@@ -601,10 +633,14 @@ int main(int argc, char* argv[])
 		cerr << "Unable to open file: " << outname << "\n";
 		return 1;
 	}
-
+/*
 	outfileTheFirst << "SymptomSet,Trial";
 	outfileTheSecond << "SymptomSet,Trial";
 	outfileTheThird << "SymptomSet,Trial";
+*/
+	outfileTheFirst << "RNG_Seed,SymptomSet,Trial";
+	outfileTheSecond << "RNG_Seed,SymptomSet,Trial";
+	outfileTheThird << "RNG_Seed,SymptomSet,Trial";
 
 	for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 	{
@@ -630,15 +666,23 @@ int main(int argc, char* argv[])
 		uint64_t trailer_trash;
 		for (trailer_trash=0; trailer_trash<NUMBER_TRIALS; trailer_trash++)
 		{
+			uint64_t rng_seed = getTickCount();
+			RNG randi (rng_seed);
+
 		// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
-//			population hoponpop(randi, pop_size, mu_r, xo_r, xo_p, elitism);
 			hoponpop = new population(randi, pop_size, mu_r, xo_r, xo_p, elitism);
 
 //			cout << "Trial: " << trailer_trash << endl;
+			if (trailer_trash==0)
+				cout << "Trial: ";
+			cout << trailer_trash << " ";
 
 //			hoponpop.populator();
 			hoponpop->populator();
 
+			specimen_t indiFirst [NUMBER_GENERATIONS];
+			specimen_t indiSecond[NUMBER_GENERATIONS];
+			specimen_t indiThird [NUMBER_GENERATIONS];
 
 			uint64_t generational_recursion;
 			for (generational_recursion=0; generational_recursion<NUMBER_GENERATIONS; generational_recursion++)
@@ -647,11 +691,13 @@ int main(int argc, char* argv[])
 //				hoponpop.breeder();
 				hoponpop->breeder();
 //				cout << "Generation over\n";
+
+				indiFirst[generational_recursion] = hoponpop->First ();
+				indiSecond[generational_recursion] = hoponpop->Second();
+				indiThird[generational_recursion] = hoponpop->Third ();
 			}
 
-			specimen_t indiFirst [NUMBER_GENERATIONS];
-			specimen_t indiSecond[NUMBER_GENERATIONS];
-			specimen_t indiThird [NUMBER_GENERATIONS];
+/*
 			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 			{
 //				indiFirst[iter] = hoponpop.First (iter);
@@ -661,10 +707,11 @@ int main(int argc, char* argv[])
 				indiSecond[iter] = hoponpop->Second(iter);
 				indiThird[iter] = hoponpop->Third (iter);
 			}
+*/
 
-			outfileTheFirst << SymptomSet << "," << trailer_trash;
-			outfileTheSecond << SymptomSet << "," << trailer_trash;
-			outfileTheThird << SymptomSet << "," << trailer_trash;
+			outfileTheFirst << rng_seed << "," << SymptomSet << "," << trailer_trash;
+			outfileTheSecond << rng_seed << "," << SymptomSet << "," << trailer_trash;
+			outfileTheThird << rng_seed << "," << SymptomSet << "," << trailer_trash;
 
 			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 			{
@@ -672,9 +719,9 @@ int main(int argc, char* argv[])
 				outfileTheSecond << "," << indiSecond[iter].gen;
 				outfileTheThird << "," << indiThird[iter].gen;
 			}
-			outfileTheFirst << "\n" << SymptomSet << "," << trailer_trash;
-			outfileTheSecond << "\n" << SymptomSet << "," << trailer_trash;
-			outfileTheThird << "\n" << SymptomSet << "," << trailer_trash;
+			outfileTheFirst << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
+			outfileTheSecond << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
+			outfileTheThird << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
 
 
 			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
@@ -689,6 +736,7 @@ int main(int argc, char* argv[])
 
 			delete hoponpop;
 		}//End of Trial
+		cout << endl;
 
 		outfileTheFirst << "\n";
 		outfileTheSecond << "\n";
