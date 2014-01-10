@@ -73,7 +73,7 @@ private:
 	uint64_t generation_;
 	void bestest(void);
 
-	GENO_TYPE population::discretize(particle_t);
+	GENO_TYPE discretize(particle_t);
 	FITNESS_TYPE calcFitness(GENO_TYPE);
 	specimen_t populate(void);
 
@@ -174,17 +174,26 @@ void population::populator(void)
 
 void population::iterate(void)
 {
-	GENO_TYPE kiddies[pop_size_];
+//	GENO_TYPE kiddies[pop_size_];
 
 	uint64_t iter, jter;
 
 	for (iter=0; iter<pop_size_; iter++)
 	{
-		for (jter=0; jter<NUMBER_ATTRIBUTES; jter)
+		for (jter=0; jter<NUMBER_ATTRIBUTES; jter++)
 		{
 //			pop_[iter].cc[jter].vel = (pop_[iter].cc[jter].vel * inertia_) + (pop_[iter].cc[jter].vel * cog_) + (best_in_swarm_[jter].vel * soc_);
-			pop_[iter].cc[jter].vel = (pop_[iter].cc[jter].vel * inertia_) + (pop_[iter].bc[jter].vel * cog_) + (best_in_swarm_[jter].vel * soc_);
-			pop_[iter].cc[jter].pos = pop_[iter].cc[jter].pos + (pop_[iter].cc[jter].vel * time__)
+			pop_[iter].cc.vel[jter] = (pop_[iter].cc.vel[jter] * inertia_) + (pop_[iter].bc.vel[jter] * cog_) + (best_in_swarm_.cc.vel[jter] * soc_);
+			if (pop_[iter].cc.vel[jter] > max_.vel[jter])
+				pop_[iter].cc.vel[jter] = max_.vel[jter];
+			else if (pop_[iter].cc.vel[jter] < min_.vel[jter])
+				pop_[iter].cc.vel[jter] = min_.vel[jter];
+
+			pop_[iter].cc.pos[jter] = pop_[iter].cc.pos[jter] + (pop_[iter].cc.vel[jter] * 1.0);//time__);
+			if (pop_[iter].cc.pos[jter] > max_.pos[jter])
+				pop_[iter].cc.pos[jter] = max_.pos[jter];
+			else if (pop_[iter].cc.pos[jter] < min_.pos[jter])
+				pop_[iter].cc.pos[jter] = min_.pos[jter];
 		}
 		pop_[iter].gen = discretize(pop_[iter].cc);
 		pop_[iter].fit = calcFitness(pop_[iter].gen);
@@ -194,7 +203,6 @@ void population::iterate(void)
 			pop_[iter].bf = pop_[iter].fit;
 		}
 	}
-
 
 	generation_++;
 	bestest();
@@ -270,6 +278,7 @@ specimen_t population::populate(void)
 {
 	specimen_t indi;
 	//indi.gen = rudi_.uniform(0, 1<<(NUMBER_ATTRIBUTES));
+	uint64_t iter;
 
 	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
 	{
@@ -316,8 +325,8 @@ int main(int argc, char* argv[])
 			("help",								"Produce help message")
 			("popsize",	po::value<uint64_t>(),		"Set Population Size")
 			("interia",	po::value<double>(),		"Set Particle Interia")
-			("cog",		po::value<double>(),		"Set pull of best position of particle")
-			("soc",		po::value<double>(),		"Set pull of best position of swarm")
+			("cog",		po::value<double>(),		"Set Cognitive effect of particle")
+			("soc",		po::value<double>(),		"Set Social effect of swarm")
 			("rng",		po::value<uint64_t>(),		"Set RNG seed")
 		;
 
@@ -404,11 +413,11 @@ int main(int argc, char* argv[])
 	{
 		qPriorLikelihood[iter] = ((qPriorProbability[iter])/(1.0-qPriorProbability[iter]));
 
-		mini[iter].pos = 0.0;
-		mini[iter].vel = 0.0;
+		mini.pos[iter] = 0.0;
+		maxi.pos[iter] = 1.0;
 
-		maxi[iter].pos = 1.0;
-		maxi[iter].vel = 1.0;
+		mini.vel[iter] = -1.0;
+		maxi.vel[iter] = 1.0;
 	}
 
 
@@ -477,6 +486,10 @@ int main(int argc, char* argv[])
 		cerr << "Unable to open file: " << outname << "\n";
 		return 1;
 	}
+
+	outfileTheFirst << "RNG_Seed=" << rng_seed << "\n";
+	outfileTheSecond << "RNG_Seed=" << rng_seed << "\n";
+	outfileTheThird << "RNG_Seed=" << rng_seed << "\n";
 
 	outfileTheFirst << "SymptomSet,Trial";
 	outfileTheSecond << "SymptomSet,Trial";
