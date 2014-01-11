@@ -404,6 +404,7 @@ int main(int argc, char* argv[])
 	double soc_r  = 0.3;
 //	uint64_t rng_seed = 0xF0F0F0F0;
 //	uint64_t rng_seed = getTickCount();
+	uint64_t num_trials = NUMBER_TRIALS;
 
 	double last_tick_count = 0.0;
 
@@ -416,6 +417,7 @@ int main(int argc, char* argv[])
 			("inertia",	po::value<double>(),		"Set Particle Inertia")
 			("cog",		po::value<double>(),		"Set Cognitive effect of particle")
 			("soc",		po::value<double>(),		"Set Social effect of swarm")
+			("trials",	po::value<uint64_t>(),		"Set Number of Trials")
 //			("rng",		po::value<uint64_t>(),		"Set RNG seed")
 		;
 
@@ -468,6 +470,16 @@ int main(int argc, char* argv[])
 		else
 		{
 			cout << "SOC was set to default of " << soc_r << ".\n";
+		}
+
+		if (vm.count("trials"))
+		{
+			num_trials = vm["trials"].as<uint64_t>();
+			cout << "Number of Trials was set to " << num_trials << ".\n";
+		}
+		else
+		{
+			cout << "Number of Trials was set to default of " << num_trials << ".\n";
 		}
 
 /*
@@ -652,7 +664,7 @@ int main(int argc, char* argv[])
 		cout << "Symptom set: " << SymptomSet << endl;
 
 		uint64_t trailer_trash;
-		for (trailer_trash=0; trailer_trash<NUMBER_TRIALS; trailer_trash++)
+		for (trailer_trash=0; trailer_trash<num_trials; trailer_trash++)
 		{
 			uint64_t rng_seed = getTickCount();
 			RNG randi (rng_seed);

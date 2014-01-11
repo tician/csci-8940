@@ -477,7 +477,7 @@ int main(int argc, char* argv[])
 	double xo_r = 0.4;
 	uint64_t xo_p = 1;
 	bool elitism = false;
-	uint64_t num_trials = 10;
+	uint64_t num_trials = NUMBER_TRIALS;
 //	uint64_t rng_seed = 0xF0F0F0F0;
 
 
@@ -551,11 +551,11 @@ int main(int argc, char* argv[])
 		if (vm.count("trials"))
 		{
 			num_trials = vm["trials"].as<uint64_t>();
-			cout << "Population size was set to " << num_trials << ".\n";
+			cout << "Number of Trials was set to " << num_trials << ".\n";
 		}
 		else
 		{
-			cout << "Population size was set to default of " << num_trials << ".\n";
+			cout << "Number of Trials was set to default of " << num_trials << ".\n";
 		}
 
 		if (vm.count("el"))
