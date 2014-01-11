@@ -46,15 +46,18 @@ using namespace std;
 #define NUMBER_SYMPTOMS				10
 bitset<NUMBER_SYMPTOMS> SymptomSet;
 
-typedef struct
+typedef struct specimen_t
 {
+	specimen_t(void) : fit(0.0), gen(0), calced(0) {};
+
 	FITNESS_TYPE	fit;
 	GENO_TYPE		gen;
+	uint64_t		calced;
 } specimen_t;
 
 
 bool loci_comp (uint64_t i,uint64_t j) { return (i<=j); }
-bool spec_comp (specimen_t i, specimen_t j) { return (i.fit>j.fit); }
+bool spec_comp (specimen_t i, specimen_t j) { return (i.fit>j.fit); } //{return ( (i.fit-j.fit)>0.0 );}
 bool spec_uniq (specimen_t i, specimen_t j) { return (i.gen==j.gen); }
 
 
@@ -64,8 +67,11 @@ private:
 	specimen_t *pop_;//[NUMBER_INDIVIDUALS];
 //	specimen_t **best_;//[NUMBER_TRACKING][NUMBER_GENERATIONS];
 	specimen_t *best_;
+	specimen_t best_ever_;
 
 	FITNESS_TYPE *sig_fit_;//[NUMBER_INDIVIDUALS];
+
+	uint64_t fitness_calculation_counter_;
 
 	RNG rudi_;
 	uint64_t pop_size_;
@@ -89,7 +95,7 @@ private:
 
 public:
 	population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
-//	~population(void);
+	~population(void);
 	void populator(void);
 	void breeder(void);
 /*
@@ -101,6 +107,8 @@ public:
 	specimen_t Second(void){return best_[1];}
 	specimen_t Third (void){return best_[2];}
 
+	specimen_t BestEver(void){return best_ever_;}
+
 	uint64_t Age(void) {return generation_;}
 };
 
@@ -108,6 +116,7 @@ population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, u
 {
 	rudi_ = rudi;
 	pop_size_ = pop_size;
+	fitness_calculation_counter_ = 0;
 	mu_r_ = mu_r;
 	xo_r_ = xo_r;
 	xo_p_ = xo_p;
@@ -124,15 +133,15 @@ population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, u
 	best_ = new specimen_t[NUMBER_TRACKING];
 }
 
-//population::~population(void)
-//{
-//	delete[] pop_;
-//	delete[] sig_fit_;
+population::~population(void)
+{
+	delete[] pop_;
+	delete[] sig_fit_;
 //	delete[] best_[2];
 //	delete[] best_[1];
 //	delete[] best_[0];
-//	delete[] best_;
-//}
+	delete[] best_;
+}
 /*
 specimen_t population::First (uint64_t gen_index)
 {
@@ -161,11 +170,7 @@ void population::bestest(void)
 	viter = std::unique(punk.begin(), punk.end(), spec_uniq);
 	punk.resize( std::distance(punk.begin(),viter) );
 
-//	for (it=loci.begin(); it!=loci.end(); it++)//++it)
-//		std::cout << ' ' << *it;
-
 	viter = punk.begin();
-
 
 /*
 	uint64_t jter=0;
@@ -188,9 +193,10 @@ void population::bestest(void)
 		best_[jter++][generation_].fit = 0;
 	}
 */
-
+/*
 	uint64_t jter=0;
-	best_[jter++] = (*viter);
+	best_[jter] = (*viter);
+	jter++; viter++;
 
 	while( (viter<punk.end()) && (jter<NUMBER_TRACKING) )
 	{
@@ -206,6 +212,24 @@ void population::bestest(void)
 	{
 		best_[jter].gen = 0;
 		best_[jter++].fit = 0;
+	}
+*/
+	uint64_t jter=0;
+	while( (viter<punk.end()) && (jter<NUMBER_TRACKING) )
+	{
+		best_[jter] = (*viter);
+		jter++; viter++;
+	}
+	while (jter<NUMBER_TRACKING)
+	{
+		best_[jter].gen = 0;
+		best_[jter++].fit = 0;
+	}
+
+
+	if (best_[0].fit > best_ever_.fit)
+	{
+		best_ever_ = best_[0];
 	}
 }
 
@@ -366,39 +390,35 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 	// Positive Likelihood
 	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
 	{
-		if (SymptomSet[iter])
+//		if (SymptomSet[iter] == 1)
+		if (SymptomSet[NUMBER_SYMPTOMS-(iter+1)] == 1)
 		{
 			temp = 1.0;
 			for (jter=0; jter<NUMBER_GENES; jter++)
 			{
-				if (genie[jter])//indi.gen[jter])
+//				if (genie[NUMBER_GENES-(jter+1)])
+				if (genie[jter])
 				{
 					temp *= (1.0-qManifestationInDisease[iter][jter]);
 				}
 			}
 			L1 *= (1.0-temp);
-//			if ((1.0-temp)>ZERO_FITNESS_LIMIT)
-//			{
-//				L1 *= (1.0-temp);
-//			}
-//			else
-//			{
-//				L1 *= ZERO_FITNESS_LIMIT;
-//			}
 		}
 	}
 
 	// Negative Likelihood
-	for (iter=0; iter<NUMBER_GENES; iter++)
+	for (jter=0; jter<NUMBER_GENES; jter++)
 	{
-		if (genie[iter])//indi.gen[iter])
+//		if (genie[NUMBER_GENES-(jter+1)])
+		if (genie[jter])
 		{
 			temp = 1.0;
-			for (jter=0; jter<NUMBER_SYMPTOMS; jter++)
+			for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
 			{
-				if (SymptomSet[jter] == 0)
+//				if (SymptomSet[iter] == 0)
+				if (SymptomSet[NUMBER_SYMPTOMS-(iter+1)] == 0)
 				{
-					temp *= (1.0-qManifestationInDisease[jter][iter]);
+					temp *= (1.0-qManifestationInDisease[iter][jter]);
 				}
 			}
 			L2 *= (temp);
@@ -406,13 +426,16 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 	}
 
 	// Prior Likelihood
-	for (iter=0; iter<NUMBER_GENES; iter++)
+	for (jter=0; jter<NUMBER_GENES; jter++)
 	{
-		if (genie[iter])//indi.gen[iter])
+//		if (genie[NUMBER_GENES-(jter+1)])
+		if (genie[jter])
 		{
-			L3 *= qPriorLikelihood[iter];
+			L3 *= qPriorLikelihood[jter];
 		}
 	}
+
+	fitness_calculation_counter_++;
 
 //	indi.gen = genie;
 //	indi.fit = (L1 * L2 * L3);
@@ -426,6 +449,7 @@ specimen_t population::populate(void)
 	specimen_t indi;
 	indi.gen = rudi_.uniform(0, 1<<(NUMBER_GENES));
 	indi.fit = calcFitness(indi.gen);
+	indi.calced = fitness_calculation_counter_;
 	return indi;
 }
 
@@ -440,6 +464,7 @@ specimen_t population::mutate(specimen_t indi)
 		}
 	}
 	indi.fit = calcFitness(indi.gen);
+	indi.calced = fitness_calculation_counter_;
 	return indi;
 }
 
@@ -452,6 +477,7 @@ int main(int argc, char* argv[])
 	double xo_r = 0.4;
 	uint64_t xo_p = 1;
 	bool elitism = false;
+	uint64_t num_trials = 10;
 //	uint64_t rng_seed = 0xF0F0F0F0;
 
 
@@ -467,6 +493,7 @@ int main(int argc, char* argv[])
 			("xr",		po::value<double>(),		"Set Crossover Rate")
 			("xp",		po::value<uint64_t>(),		"Set Maximum Number of Crossover Points")
 			("el",		po::value<bool>(),			"Enable Elitism")
+			("trials",	po::value<uint64_t>(),		"Set Number of Trials")
 //			("rng",		po::value<uint64_t>(),		"Set RNG seed")
 		;
 
@@ -521,6 +548,16 @@ int main(int argc, char* argv[])
 			cout << "Maximum number of crossover points was set to default of " << xo_p << ".\n";
 		}
 
+		if (vm.count("trials"))
+		{
+			num_trials = vm["trials"].as<uint64_t>();
+			cout << "Population size was set to " << num_trials << ".\n";
+		}
+		else
+		{
+			cout << "Population size was set to default of " << num_trials << ".\n";
+		}
+
 		if (vm.count("el"))
 		{
 			elitism = vm["el"].as<bool>();
@@ -557,23 +594,25 @@ int main(int argc, char* argv[])
 
 //	RNG randi (rng_seed);
 
-	uint64_t iter;
+	uint64_t iter, jter;
 
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
 		qPriorLikelihood[iter] = ((qPriorProbability[iter])/(1.0-qPriorProbability[iter]));
+		if (qPriorLikelihood[iter] > (1.0-ZERO_FITNESS_LIMIT))
+			qPriorLikelihood[iter] = (1.0-ZERO_FITNESS_LIMIT);
+		if (qPriorLikelihood[iter] < ZERO_FITNESS_LIMIT)
+			qPriorLikelihood[iter] = ZERO_FITNESS_LIMIT;
 	}
 
 	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
 	{
-		uint64_t jter;
 		for (jter=0; jter<NUMBER_GENES; jter++)
 		{
 			if (qManifestationInDisease[iter][jter] < ZERO_FITNESS_LIMIT)
 				qManifestationInDisease[iter][jter] = ZERO_FITNESS_LIMIT;
 		}
 	}
-
 
 
 
@@ -646,9 +685,32 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+
+	strstr.clear();	strstr.str("");
+	strstr << "./mfd_best"
+		<< "_" << pop_size
+		<< "_" << NUMBER_GENERATIONS
+		<< "_" << xo_p
+		<< "_" << xo_r
+		<< "_" << mu_r
+		<< "_" << elitism
+//			<< "_" << trailer_trash			// Current Trial
+//		<< "_" << SymptomSet
+		<< ".csv";
+	outname = strstr.str();
+	ofstream outfileTheBest;
+	outfileTheBest.open( outname.c_str() );
+
+	if ( !outfileTheBest.is_open() )
+	{
+		cerr << "Unable to open file: " << outname << "\n";
+		return 1;
+	}
+
 	outfileTheFirst.precision(35);
 	outfileTheSecond.precision(35);
 	outfileTheThird.precision(35);
+	outfileTheBest.precision(35);
 
 /*
 	outfileTheFirst << "SymptomSet,Trial";
@@ -658,6 +720,7 @@ int main(int argc, char* argv[])
 	outfileTheFirst << "RNG_Seed,SymptomSet,Trial";
 	outfileTheSecond << "RNG_Seed,SymptomSet,Trial";
 	outfileTheThird << "RNG_Seed,SymptomSet,Trial";
+	outfileTheBest << "RNG_Seed,SymptomSet,Trial,FitCalc,Genotype,Fitness";
 
 	for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 	{
@@ -681,7 +744,7 @@ int main(int argc, char* argv[])
 		cout << "Symptom set: " << SymptomSet << endl;
 
 		uint64_t trailer_trash;
-		for (trailer_trash=0; trailer_trash<NUMBER_TRIALS; trailer_trash++)
+		for (trailer_trash=0; trailer_trash<num_trials; trailer_trash++)
 		{
 			uint64_t rng_seed = getTickCount();
 			RNG randi (rng_seed);
@@ -725,6 +788,8 @@ int main(int argc, char* argv[])
 				indiThird[iter] = hoponpop->Third (iter);
 			}
 */
+			specimen_t bestever = hoponpop->BestEver();
+			outfileTheBest << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash << "," << bestever.calced << "," << bestever.gen << "," << bestever.fit;
 
 			outfileTheFirst << rng_seed << "," << SymptomSet << "," << trailer_trash;
 			outfileTheSecond << rng_seed << "," << SymptomSet << "," << trailer_trash;
@@ -758,10 +823,12 @@ int main(int argc, char* argv[])
 		outfileTheFirst << "\n";
 		outfileTheSecond << "\n";
 		outfileTheThird << "\n";
+		outfileTheBest << "\n";
 
 		outfileTheFirst.flush();
 		outfileTheSecond.flush();
 		outfileTheThird.flush();
+		outfileTheBest.flush();
 
 		cout << "\tProcessing time: " << ((double) getTickCount() - last_tick_count)/getTickFrequency() << "[s]\n";
 
@@ -769,6 +836,7 @@ int main(int argc, char* argv[])
 	outfileTheFirst.close();
 	outfileTheSecond.close();
 	outfileTheThird.close();
+	outfileTheBest.close();
 
 	return 0;
 }

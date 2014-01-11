@@ -37,18 +37,28 @@ using namespace std;
 #define NUMBER_SYMPTOMS				10
 bitset<NUMBER_SYMPTOMS> SymptomSet;
 
-typedef struct
+typedef struct particle_t
 {
+	particle_t(void) {
+		uint64_t iter;
+		for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+		{
+			pos[iter] = 0.0;
+			vel[iter] = 0.0;
+		}
+	};
+
 	double pos[NUMBER_ATTRIBUTES];
 	double vel[NUMBER_ATTRIBUTES];
 } particle_t;
 
 typedef struct specimen_t
 {
-	specimen_t(void) : fit(0.0), gen(0), bf(0.0) {};
+	specimen_t(void) : fit(0.0), gen(0), calced(0), bf(0.0) {};
 
 	FITNESS_TYPE	fit;
 	GENO_TYPE		gen;
+	uint64_t		calced;
 	particle_t		cc;
 
 	FITNESS_TYPE	bf;
@@ -70,6 +80,7 @@ private:
 	RNG rudi_;
 	uint64_t pop_size_;
 	specimen_t best_in_swarm_;
+	uint64_t fitness_calculation_counter_;
 
 	particle_t min_, max_;
 	double cog_, soc_, inertia_;
@@ -83,6 +94,7 @@ private:
 
 public:
 	population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia);
+	~population(void);
 	void populator(void);
 	void iterate(void);
 
@@ -103,6 +115,7 @@ population::population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particl
 {
 	rudi_ = rudi;
 	pop_size_ = pop_size;
+	fitness_calculation_counter_ = 0;
 
 	min_ = min_lim;
 	max_ = max_lim;
@@ -116,6 +129,15 @@ population::population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particl
 //	best_[1] = new specimen_t[NUMBER_GENERATIONS];
 //	best_[2] = new specimen_t[NUMBER_GENERATIONS];
 	best_ = new specimen_t[NUMBER_TRACKING];
+}
+
+population::~population(void)
+{
+	delete[] pop_;
+//	delete[] best_[2];
+//	delete[] best_[1];
+//	delete[] best_[0];
+	delete[] best_;
 }
 /*
 specimen_t population::First (uint64_t gen_index)
@@ -170,8 +192,10 @@ void population::bestest(void)
 	if (best_[0][generation_].fit > best_in_swarm_.fit)
 		best_in_swarm_ = best_[0][generation_];
 */
+/*
 	uint64_t jter=0;
-	best_[jter++] = (*viter);
+	best_[jter] = (*viter);
+	jter++; viter++;
 
 	while( (viter<punk.end()) && (jter<NUMBER_TRACKING) )
 	{
@@ -188,9 +212,26 @@ void population::bestest(void)
 		best_[jter].gen = 0;
 		best_[jter++].fit = 0;
 	}
+*/
+
+	uint64_t jter=0;
+	while( (viter<punk.end()) && (jter<NUMBER_TRACKING) )
+	{
+		best_[jter] = (*viter);
+		jter++; viter++;
+	}
+	while (jter<NUMBER_TRACKING)
+	{
+		best_[jter].gen = 0;
+		best_[jter++].fit = 0;
+	}
+
 
 	if (best_[0].fit > best_in_swarm_.fit)
+	{
 		best_in_swarm_ = best_[0];
+	}
+
 }
 
 
@@ -246,6 +287,8 @@ void population::iterate(void)
 		}
 //		pop_[iter].gen = discretize(pop_[iter].cc);
 		pop_[iter].fit = calcFitness(pop_[iter].gen);
+		pop_[iter].calced = fitness_calculation_counter_;
+
 		if (pop_[iter].fit > pop_[iter].bf)
 		{
 			pop_[iter].bc = pop_[iter].cc;
@@ -269,7 +312,7 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 	// Positive Likelihood
 	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
 	{
-		if (SymptomSet[iter])
+		if (SymptomSet[NUMBER_SYMPTOMS-(iter+1)] == 1)
 		{
 			temp = 1.0;
 			for (jter=0; jter<NUMBER_ATTRIBUTES; jter++)
@@ -280,28 +323,20 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 				}
 			}
 			L1 *= (1.0-temp);
-//			if ((1.0-temp)>ZERO_FITNESS_LIMIT)
-//			{
-//				L1 *= (1.0-temp);
-//			}
-//			else
-//			{
-//				L1 *= ZERO_FITNESS_LIMIT;
-//			}
 		}
 	}
 
 	// Negative Likelihood
-	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+	for (jter=0; jter<NUMBER_ATTRIBUTES; jter++)
 	{
-		if (genie[iter])//indi.gen[iter])
+		if (genie[jter])//indi.gen[iter])
 		{
 			temp = 1.0;
-			for (jter=0; jter<NUMBER_SYMPTOMS; jter++)
+			for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
 			{
-				if (SymptomSet[jter] == 0)
+				if (SymptomSet[NUMBER_SYMPTOMS-(iter+1)] == 0)
 				{
-					temp *= (1.0-qManifestationInDisease[jter][iter]);
+					temp *= (1.0-qManifestationInDisease[iter][jter]);
 				}
 			}
 			L2 *= (temp);
@@ -309,13 +344,15 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 	}
 
 	// Prior Likelihood
-	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+	for (jter=0; jter<NUMBER_ATTRIBUTES; jter++)
 	{
-		if (genie[iter])//indi.gen[iter])
+		if (genie[jter])//indi.gen[iter])
 		{
-			L3 *= qPriorLikelihood[iter];
+			L3 *= qPriorLikelihood[jter];
 		}
 	}
+
+	fitness_calculation_counter_++;
 
 //	indi.gen = genie;
 //	indi.fit = (L1 * L2 * L3);
@@ -338,6 +375,7 @@ specimen_t population::populate(void)
 
 	indi.gen = discretize(indi.cc);
 	indi.fit = calcFitness(indi.gen);
+	indi.calced = fitness_calculation_counter_;
 	indi.bc = indi.cc;
 	indi.bf = indi.fit;
 	return indi;
@@ -458,12 +496,16 @@ int main(int argc, char* argv[])
 
 //	RNG randi (rng_seed);
 
-	uint64_t iter;
+	uint64_t iter, jter;
 	particle_t mini, maxi;
 
 	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
 	{
 		qPriorLikelihood[iter] = ((qPriorProbability[iter])/(1.0-qPriorProbability[iter]));
+		if (qPriorLikelihood[iter] > (1.0-ZERO_FITNESS_LIMIT))
+			qPriorLikelihood[iter] = (1.0-ZERO_FITNESS_LIMIT);
+		if (qPriorLikelihood[iter] < ZERO_FITNESS_LIMIT)
+			qPriorLikelihood[iter] = ZERO_FITNESS_LIMIT;
 
 		mini.pos[iter] = 0.0;
 		maxi.pos[iter] = 1.0;
@@ -474,7 +516,6 @@ int main(int argc, char* argv[])
 
 	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
 	{
-		uint64_t jter;
 		for (jter=0; jter<NUMBER_ATTRIBUTES; jter++)
 		{
 			if (qManifestationInDisease[iter][jter] < ZERO_FITNESS_LIMIT)
@@ -587,7 +628,7 @@ int main(int argc, char* argv[])
 	outfileTheFirst << "RNG_Seed,SymptomSet,Trial";
 	outfileTheSecond << "RNG_Seed,SymptomSet,Trial";
 	outfileTheThird << "RNG_Seed,SymptomSet,Trial";
-	outfileTheBest << "RNG_Seed,SymptomSet,Trial,Genotype,Fitness";
+	outfileTheBest << "RNG_Seed,SymptomSet,Trial,FitCalc,Genotype,Fitness";
 
 	for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 	{
@@ -656,7 +697,7 @@ int main(int argc, char* argv[])
 			}
 */
 			specimen_t bestinswarm = hoponpop->BestInSwarm();
-			outfileTheBest << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash << "," << bestinswarm.gen << "," << bestinswarm.fit;
+			outfileTheBest << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash << "," << bestinswarm.calced << "," << bestinswarm.gen << "," << bestinswarm.fit;
 
 			outfileTheFirst << rng_seed << "," << SymptomSet << "," << trailer_trash;
 			outfileTheSecond << rng_seed << "," << SymptomSet << "," << trailer_trash;
