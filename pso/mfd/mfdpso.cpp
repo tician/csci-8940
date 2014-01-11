@@ -27,7 +27,7 @@
 //#define FITNESS_TYPE				double
 #define GENO_TYPE					bitset<NUMBER_ATTRIBUTES>
 
-#define ZERO_FITNESS_LIMIT			1e-6
+#define ZERO_FITNESS_LIMIT			1e-32
 
 using namespace cv;
 using namespace boost;
