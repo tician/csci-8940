@@ -9,7 +9,6 @@
 #include <iterator>
 
 #include <boost/program_options.hpp>
-#include "fpga.h"
 
 
 #define NUMBER_TRIALS				10
@@ -18,8 +17,11 @@
 #define NUMBER_TRACKING				3
 #define NUMBER_GENES				73
 
-#define FITNESS_TYPE				double
+//#define FITNESS_TYPE				double
+#define FITNESS_TYPE				uint64_t
 #define GENO_TYPE					bitset<NUMBER_GENES>
+
+#include "fpga.h"
 
 using namespace cv;
 using namespace boost;
@@ -319,69 +321,24 @@ void population::mutator(void)
 	}
 }
 
-FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
+FITNESS_TYPE population::calcFitness(genotype_t genie)
 {
-	FITNESS_TYPE temp = 1.0;
-	FITNESS_TYPE L1 = 1.0;
-	FITNESS_TYPE L2 = 1.0;
-	FITNESS_TYPE L3 = 1.0;
+	FITNESS_TYPE temp = 0;
 	uint64_t iter = 0, jter = 0;
 
-	// Positive Likelihood
-	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
+	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
-//		if (SymptomSet[iter] == 1)
-		if (SymptomSet[NUMBER_SYMPTOMS-(iter+1)] == 1)
-		{
-			temp = 1.0;
-			for (jter=0; jter<NUMBER_GENES; jter++)
-			{
-//				if (genie[NUMBER_GENES-(jter+1)])
-				if (genie[jter])
-				{
-					temp *= (1.0-qManifestationInDisease[iter][jter]);
-				}
-			}
-			L1 *= (1.0-temp);
-		}
-	}
-
-	// Negative Likelihood
-	for (jter=0; jter<NUMBER_GENES; jter++)
-	{
-//		if (genie[NUMBER_GENES-(jter+1)])
-		if (genie[jter])
-		{
-			temp = 1.0;
-			for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
-			{
-//				if (SymptomSet[iter] == 0)
-				if (SymptomSet[NUMBER_SYMPTOMS-(iter+1)] == 0)
-				{
-					temp *= (1.0-qManifestationInDisease[iter][jter]);
-				}
-			}
-			L2 *= (temp);
-		}
-	}
-
-	// Prior Likelihood
-	for (jter=0; jter<NUMBER_GENES; jter++)
-	{
-//		if (genie[NUMBER_GENES-(jter+1)])
-		if (genie[jter])
-		{
-			L3 *= qPriorLikelihood[jter];
-		}
+		if (genie.one[iter)]==1)
+			temp += West73_Yields[iter].y1;
+		if (genie.two[iter]==1)
+			temp += West73_Yields[iter].y2;
+		if (genie.thr[iter]==1)
+			temp += West73_Yields[iter].y3;
 	}
 
 	fitness_calculation_counter_++;
 
-//	indi.gen = genie;
-//	indi.fit = (L1 * L2 * L3);
-//	cout << "Geno:" << indi.gen << "\tFit:" << indi.fit << endl;
-//	cout << "Geno: " << genie << "\tFit: " << (L1*L2*L3) << endl;
-	return ((L1*L2*L3));
+	return temp;
 }
 
 specimen_t population::populate(void)
@@ -422,9 +379,29 @@ specimen_t population::mutate(specimen_t indi)
 
 void population::fixer(specimen_t& indi)
 {
+	// Fix for repeated harvesting
 	indi.gen.two &= ~indi.gen.one;
 	indi.gen.thr &= ~indi.gen.one;
 	indi.gen.thr &= ~indi.gen.two;
+
+
+	// Fix for adjacency
+	uint64_t iter;
+	for (iter=0; iter<NUMBER_GENES; iter++)
+	{
+		if (genie.one[iter]==1)
+		{
+			genie.one[iter] &= West73_Adjacency.mask[iter];
+		}
+		if (genie.two[iter]==1)
+		{
+			genie.two[iter] &= West73_Adjacency.mask[iter];
+		}
+		if (genie.thr[iter]==1)
+		{
+			genie.thr[iter] &= West73_Adjacency.mask[iter];
+		}
+	}
 }
 
 
