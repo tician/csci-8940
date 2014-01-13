@@ -1,4 +1,16 @@
 
+
+#define NUMBER_TRIALS				10
+#define NUMBER_GENERATIONS			300
+
+#define NUMBER_TRACKING				3
+#define NUMBER_GENES				73
+
+
+//#define FITNESS_TYPE				double
+#define FITNESS_TYPE				uint64_t
+#define GENO_TYPE					bitset<NUMBER_GENES>
+
 typedef struct
 {
 	uint64_t	id;

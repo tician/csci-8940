@@ -9,19 +9,7 @@
 #include <iterator>
 
 #include <boost/program_options.hpp>
-
-
-#define NUMBER_TRIALS				10
-#define NUMBER_GENERATIONS			300
-
-#define NUMBER_TRACKING				3
-#define NUMBER_GENES				73
-
-//#define FITNESS_TYPE				double
-#define FITNESS_TYPE				uint64_t
-#define GENO_TYPE					bitset<NUMBER_GENES>
-
-#include "fpga.h"
+#include "fpga.hpp"
 
 using namespace cv;
 using namespace boost;
@@ -537,28 +525,6 @@ int main(int argc, char* argv[])
 	}
 
 
-//	RNG randi (rng_seed);
-
-	uint64_t iter, jter;
-
-	for (iter=0; iter<NUMBER_GENES; iter++)
-	{
-		qPriorLikelihood[iter] = ((qPriorProbability[iter])/(1.0-qPriorProbability[iter]));
-		if (qPriorLikelihood[iter] > (1.0-ZERO_FITNESS_LIMIT))
-			qPriorLikelihood[iter] = (1.0-ZERO_FITNESS_LIMIT);
-		if (qPriorLikelihood[iter] < ZERO_FITNESS_LIMIT)
-			qPriorLikelihood[iter] = ZERO_FITNESS_LIMIT;
-	}
-
-	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
-	{
-		for (jter=0; jter<NUMBER_GENES; jter++)
-		{
-			if (qManifestationInDisease[iter][jter] < ZERO_FITNESS_LIMIT)
-				qManifestationInDisease[iter][jter] = ZERO_FITNESS_LIMIT;
-		}
-	}
-
 	// Print data to file
 	stringstream strstr (stringstream::in | stringstream::out);
 	string outname;
@@ -637,19 +603,19 @@ int main(int argc, char* argv[])
 	}
 
 	strstr.clear();	strstr.str("");
-	strstr << "./mfd_best"
-		<< "_" << pop_size
-		<< "_" << NUMBER_GENERATIONS
-		<< "_" << xo_p
-		<< "_" << xo_r
-		<< "_" << mu_r
-		<< "_" << elitism
+	strstr << "./sga_fp_best"
+//		<< "_" << pop_size
+//		<< "_" << NUMBER_GENERATIONS
+//		<< "_" << xo_p
+//		<< "_" << xo_r
+//		<< "_" << mu_r
+//		<< "_" << elitism
 //			<< "_" << trailer_trash			// Current Trial
 //		<< "_" << SymptomSet
 		<< ".csv";
 	outname = strstr.str();
 	ofstream outfileTheBest;
-	outfileTheBest.open( outname.c_str() );
+	outfileTheBest.open( outname.c_str(), std::ofstream::out | std::ofstream::app );
 
 	if ( !outfileTheBest.is_open() )
 	{
@@ -677,7 +643,7 @@ int main(int argc, char* argv[])
 		outfileTheThird << "\n";
 	}
 
-	outfileTheBest << "RNG_Seed,SymptomSet,Trial,FitEvals,EndGen,Genotype,Fitness";
+	outfileTheBest << "NumGens,PopSize,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Genotype,Fitness";
 
 	population *hoponpop;
 
@@ -739,7 +705,9 @@ int main(int argc, char* argv[])
 */
 			specimen_t bestever = hoponpop->BestEver();
 			uint64_t aged = hoponpop->Age();
-			outfileTheBest << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash << "," << bestever.calced << "," << aged << "," << bestever.gen << "," << bestever.fit;
+//			outfileTheBest << "NumGens,PopSize,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Genotype,Fitness";
+			outfileTheBest << "\n" << NUMBER_GENERATIONS << "," << pop_size << "," << xo_p << "," << xo_r << "," << mu_r << "," << elitism << ","
+			<< rng_seed << "," << SymptomSet << "," << trailer_trash << "," << bestever.calced << "," << aged << "," << bestever.gen << "," << bestever.fit;
 
 			if (enable_history)
 			{
