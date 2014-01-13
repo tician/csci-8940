@@ -3,7 +3,6 @@
 #include <sstream>
 #include <bitset>
 #include "opencv2/core/core.hpp"
-#include <cmath>
 
 #include <algorithm>
 #include <vector>
@@ -252,6 +251,10 @@ void population::iterate(void)
 {
 //	GENO_TYPE kiddies[pop_size_];
 
+	// Check for lack of improvement in best particle (over 25 iterations, then stop processing)
+	if (fitness_calculation_counter_ > (best_in_swarm_.calced + (pop_size_ * 25)) )
+		return;
+
 	uint64_t iter, jter;
 
 	for (iter=0; iter<pop_size_; iter++)
@@ -405,6 +408,7 @@ int main(int argc, char* argv[])
 //	uint64_t rng_seed = 0xF0F0F0F0;
 //	uint64_t rng_seed = getTickCount();
 	uint64_t num_trials = NUMBER_TRIALS;
+	bool enable_history = false;
 
 	double last_tick_count = 0.0;
 
@@ -418,6 +422,7 @@ int main(int argc, char* argv[])
 			("cog",		po::value<double>(),		"Set Cognitive effect of particle")
 			("soc",		po::value<double>(),		"Set Social effect of swarm")
 			("trials",	po::value<uint64_t>(),		"Set Number of Trials")
+			("history",	po::value<bool>(),			"Enable full history")
 //			("rng",		po::value<uint64_t>(),		"Set RNG seed")
 		;
 
@@ -482,6 +487,15 @@ int main(int argc, char* argv[])
 			cout << "Number of Trials was set to default of " << num_trials << ".\n";
 		}
 
+		if (vm.count("enable_history"))
+		{
+			enable_history = vm["enable_history"].as<bool>();
+			cout << "History enabled: " << enable_history << ".\n";
+		}
+		else
+		{
+			cout << "History was set to default of " << enable_history << ".\n";
+		}
 /*
 		if (vm.count("rng"))
 		{
@@ -535,73 +549,79 @@ int main(int argc, char* argv[])
 		}
 	}
 
-
 	// Print data to file
 	stringstream strstr (stringstream::in | stringstream::out);
-	strstr.clear();	strstr.str("");
-	strstr << "./mfd"
-		<< "_" << pop_size
-		<< "_" << NUMBER_GENERATIONS
-		<< "_" << inertia_r
-		<< "_" << cog_r
-		<< "_" << soc_r
-//			<< "_" << trailer_trash			// Current Trial
-//		<< "_" << SymptomSet
-		<< "_" << "first"
-		<< ".csv";
-	string outname;
-	outname = strstr.str();
 	ofstream outfileTheFirst;
-	outfileTheFirst.open( outname.c_str() );
-
-	if ( !outfileTheFirst.is_open() )
-	{
-		cerr << "Unable to open file: " << outname << "\n";
-		return 1;
-	}
-
-	strstr.clear();	strstr.str("");
-	strstr << "./mfd"
-		<< "_" << pop_size
-		<< "_" << NUMBER_GENERATIONS
-		<< "_" << inertia_r
-		<< "_" << cog_r
-		<< "_" << soc_r
-//			<< "_" << trailer_trash			// Current Trial
-//		<< "_" << SymptomSet
-		<< "_" << "second"
-		<< ".csv";
-	outname = strstr.str();
 	ofstream outfileTheSecond;
-	outfileTheSecond.open( outname.c_str() );
-
-	if ( !outfileTheSecond.is_open() )
-	{
-		cerr << "Unable to open file: " << outname << "\n";
-		return 1;
-	}
-
-	strstr.clear();	strstr.str("");
-	strstr << "./mfd"
-		<< "_" << pop_size
-		<< "_" << NUMBER_GENERATIONS
-		<< "_" << inertia_r
-		<< "_" << cog_r
-		<< "_" << soc_r
-//			<< "_" << trailer_trash			// Current Trial
-//		<< "_" << SymptomSet
-		<< "_" << "third"
-		<< ".csv";
-	outname = strstr.str();
 	ofstream outfileTheThird;
-	outfileTheThird.open( outname.c_str() );
+	string outname;
 
-	if ( !outfileTheThird.is_open() )
+	if (enable_history)
 	{
-		cerr << "Unable to open file: " << outname << "\n";
-		return 1;
-	}
+		strstr.clear();	strstr.str("");
+		strstr << "./mfd"
+			<< "_" << pop_size
+			<< "_" << NUMBER_GENERATIONS
+			<< "_" << inertia_r
+			<< "_" << cog_r
+			<< "_" << soc_r
+	//			<< "_" << trailer_trash			// Current Trial
+	//		<< "_" << SymptomSet
+			<< "_" << "first"
+			<< ".csv";
+		outname = strstr.str();
+		outfileTheFirst.open( outname.c_str() );
 
+		if ( !outfileTheFirst.is_open() )
+		{
+			cerr << "Unable to open file: " << outname << "\n";
+			return 1;
+		}
+
+		strstr.clear();	strstr.str("");
+		strstr << "./mfd"
+			<< "_" << pop_size
+			<< "_" << NUMBER_GENERATIONS
+			<< "_" << inertia_r
+			<< "_" << cog_r
+			<< "_" << soc_r
+	//			<< "_" << trailer_trash			// Current Trial
+	//		<< "_" << SymptomSet
+			<< "_" << "second"
+			<< ".csv";
+		outname = strstr.str();
+		outfileTheSecond.open( outname.c_str() );
+
+		if ( !outfileTheSecond.is_open() )
+		{
+			cerr << "Unable to open file: " << outname << "\n";
+			return 1;
+		}
+
+		strstr.clear();	strstr.str("");
+		strstr << "./mfd"
+			<< "_" << pop_size
+			<< "_" << NUMBER_GENERATIONS
+			<< "_" << inertia_r
+			<< "_" << cog_r
+			<< "_" << soc_r
+	//			<< "_" << trailer_trash			// Current Trial
+	//		<< "_" << SymptomSet
+			<< "_" << "third"
+			<< ".csv";
+		outname = strstr.str();
+		outfileTheThird.open( outname.c_str() );
+
+		if ( !outfileTheThird.is_open() )
+		{
+			cerr << "Unable to open file: " << outname << "\n";
+			return 1;
+		}
+
+		outfileTheFirst.precision(35);
+		outfileTheSecond.precision(35);
+		outfileTheThird.precision(35);
+	}
 
 	strstr.clear();	strstr.str("");
 	strstr << "./mfd_best"
@@ -623,35 +643,27 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	outfileTheFirst.precision(35);
-	outfileTheSecond.precision(35);
-	outfileTheThird.precision(35);
 	outfileTheBest.precision(35);
 
-/*
-	outfileTheFirst << "RNG_Seed=" << rng_seed << "\n";
-	outfileTheSecond << "RNG_Seed=" << rng_seed << "\n";
-	outfileTheThird << "RNG_Seed=" << rng_seed << "\n";
-
-	outfileTheFirst << "SymptomSet,Trial";
-	outfileTheSecond << "SymptomSet,Trial";
-	outfileTheThird << "SymptomSet,Trial";
-*/
-	outfileTheFirst << "RNG_Seed,SymptomSet,Trial";
-	outfileTheSecond << "RNG_Seed,SymptomSet,Trial";
-	outfileTheThird << "RNG_Seed,SymptomSet,Trial";
-	outfileTheBest << "RNG_Seed,SymptomSet,Trial,FitCalc,Genotype,Fitness";
-
-	for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+	if (enable_history)
 	{
-		outfileTheFirst << ",G" << iter;
-		outfileTheSecond << ",G" << iter;
-		outfileTheThird << ",G" << iter;
+		outfileTheFirst << "RNG_Seed,SymptomSet,Trial";
+		outfileTheSecond << "RNG_Seed,SymptomSet,Trial";
+		outfileTheThird << "RNG_Seed,SymptomSet,Trial";
+
+		for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+		{
+			outfileTheFirst << ",G" << iter;
+			outfileTheSecond << ",G" << iter;
+			outfileTheThird << ",G" << iter;
+		}
+
+		outfileTheFirst << "\n";
+		outfileTheSecond << "\n";
+		outfileTheThird << "\n";
 	}
 
-	outfileTheFirst << "\n";
-	outfileTheSecond << "\n";
-	outfileTheThird << "\n";
+	outfileTheBest << "RNG_Seed,SymptomSet,Trial,FitEvals,EndGen,Genotype,Fitness";
 
 	population *hoponpop;
 
@@ -692,9 +704,12 @@ int main(int argc, char* argv[])
 				hoponpop->iterate();
 //				cout << "Generation over\n";
 
-				indiFirst[generational_recursion] = hoponpop->First ();
-				indiSecond[generational_recursion] = hoponpop->Second();
-				indiThird[generational_recursion] = hoponpop->Third ();
+				if (enable_history)
+				{
+					indiFirst[generational_recursion] = hoponpop->First ();
+					indiSecond[generational_recursion] = hoponpop->Second();
+					indiThird[generational_recursion] = hoponpop->Third ();
+				}
 			}
 
 /*
@@ -709,53 +724,62 @@ int main(int argc, char* argv[])
 			}
 */
 			specimen_t bestinswarm = hoponpop->BestInSwarm();
-			outfileTheBest << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash << "," << bestinswarm.calced << "," << bestinswarm.gen << "," << bestinswarm.fit;
+			uint64_t aged = hoponpop->Age();
+			outfileTheBest << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash << "," << bestinswarm.calced << "," << aged << "," << bestinswarm.gen << "," << bestinswarm.fit;
 
-			outfileTheFirst << rng_seed << "," << SymptomSet << "," << trailer_trash;
-			outfileTheSecond << rng_seed << "," << SymptomSet << "," << trailer_trash;
-			outfileTheThird << rng_seed << "," << SymptomSet << "," << trailer_trash;
-
-			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+			if (enable_history)
 			{
-				outfileTheFirst << "," << indiFirst[iter].gen;
-				outfileTheSecond << "," << indiSecond[iter].gen;
-				outfileTheThird << "," << indiThird[iter].gen;
-			}
-			outfileTheFirst << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
-			outfileTheSecond << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
-			outfileTheThird << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
+				outfileTheFirst << rng_seed << "," << SymptomSet << "," << trailer_trash;
+				outfileTheSecond << rng_seed << "," << SymptomSet << "," << trailer_trash;
+				outfileTheThird << rng_seed << "," << SymptomSet << "," << trailer_trash;
 
+				for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+				{
+					outfileTheFirst << "," << indiFirst[iter].gen;
+					outfileTheSecond << "," << indiSecond[iter].gen;
+					outfileTheThird << "," << indiThird[iter].gen;
+				}
+				outfileTheFirst << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
+				outfileTheSecond << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
+				outfileTheThird << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
 
-			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
-			{
-				outfileTheFirst << "," << indiFirst[iter].fit;
-				outfileTheSecond << "," << indiSecond[iter].fit;
-				outfileTheThird << "," << indiThird[iter].fit;
+				for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+				{
+					outfileTheFirst << "," << indiFirst[iter].fit;
+					outfileTheSecond << "," << indiSecond[iter].fit;
+					outfileTheThird << "," << indiThird[iter].fit;
+				}
+				outfileTheFirst << "\n";
+				outfileTheSecond << "\n";
+				outfileTheThird << "\n";
 			}
-			outfileTheFirst << "\n";
-			outfileTheSecond << "\n";
-			outfileTheThird << "\n";
 
 			delete hoponpop;
 		}//End of Trial
 		cout << endl;
+		if (enable_history)
+		{
+			outfileTheFirst << "\n";
+			outfileTheSecond << "\n";
+			outfileTheThird << "\n";
 
-		outfileTheFirst << "\n";
-		outfileTheSecond << "\n";
-		outfileTheThird << "\n";
+			outfileTheFirst.flush();
+			outfileTheSecond.flush();
+			outfileTheThird.flush();
+		}
+
 		outfileTheBest << "\n";
-
-		outfileTheFirst.flush();
-		outfileTheSecond.flush();
-		outfileTheThird.flush();
 		outfileTheBest.flush();
 
 		cout << "\tProcessing time: " << ((double) getTickCount() - last_tick_count)/getTickFrequency() << "[s]\n";
 
 	}//End of Symptom Set
-	outfileTheFirst.close();
-	outfileTheSecond.close();
-	outfileTheThird.close();
+	if (enable_history)
+	{
+		outfileTheFirst.close();
+		outfileTheSecond.close();
+		outfileTheThird.close();
+	}
 	outfileTheBest.close();
 
 	return 0;

@@ -51,6 +51,7 @@
 			<Add library="/usr/lib/libboost_program_options.so" />
 		</Linker>
 		<Unit filename="fpga.cpp" />
+		<Unit filename="fpga.hpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />

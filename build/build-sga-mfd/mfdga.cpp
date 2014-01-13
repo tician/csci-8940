@@ -13,7 +13,7 @@
 
 
 #define NUMBER_TRIALS				10
-#define NUMBER_GENERATIONS			30
+#define NUMBER_GENERATIONS			300
 //#define NUMBER_INDIVIDUALS			80
 //#define NUMBER_INDIVIDUALS			120
 //#define NUMBER_INDIVIDUALS			160
@@ -36,7 +36,7 @@
 //#define FITNESS_TYPE				double
 #define GENO_TYPE					bitset<NUMBER_GENES>
 
-#define ZERO_FITNESS_LIMIT			1e-6
+#define ZERO_FITNESS_LIMIT			1e-32
 
 using namespace cv;
 using namespace boost;
@@ -46,15 +46,18 @@ using namespace std;
 #define NUMBER_SYMPTOMS				10
 bitset<NUMBER_SYMPTOMS> SymptomSet;
 
-typedef struct
+typedef struct specimen_t
 {
+	specimen_t(void) : fit(0.0), gen(0), calced(0) {};
+
 	FITNESS_TYPE	fit;
 	GENO_TYPE		gen;
+	uint64_t		calced;
 } specimen_t;
 
 
 bool loci_comp (uint64_t i,uint64_t j) { return (i<=j); }
-bool spec_comp (specimen_t i, specimen_t j) { return (i.fit>j.fit); }
+bool spec_comp (specimen_t i, specimen_t j) { return (i.fit>j.fit); } //{return ( (i.fit-j.fit)>0.0 );}
 bool spec_uniq (specimen_t i, specimen_t j) { return (i.gen==j.gen); }
 
 
@@ -62,9 +65,13 @@ class population
 {
 private:
 	specimen_t *pop_;//[NUMBER_INDIVIDUALS];
-	specimen_t **best_;//[NUMBER_TRACKING][NUMBER_GENERATIONS];
+//	specimen_t **best_;//[NUMBER_TRACKING][NUMBER_GENERATIONS];
+	specimen_t *best_;
+	specimen_t best_ever_;
 
 	FITNESS_TYPE *sig_fit_;//[NUMBER_INDIVIDUALS];
+
+	uint64_t fitness_calculation_counter_;
 
 	RNG rudi_;
 	uint64_t pop_size_;
@@ -88,13 +95,19 @@ private:
 
 public:
 	population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
-//	~population(void);
+	~population(void);
 	void populator(void);
 	void breeder(void);
-
+/*
 	specimen_t First (uint64_t);
 	specimen_t Second(uint64_t);
 	specimen_t Third (uint64_t);
+*/
+	specimen_t First (void){return best_[0];}
+	specimen_t Second(void){return best_[1];}
+	specimen_t Third (void){return best_[2];}
+
+	specimen_t BestEver(void){return best_ever_;}
 
 	uint64_t Age(void) {return generation_;}
 };
@@ -103,6 +116,7 @@ population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, u
 {
 	rudi_ = rudi;
 	pop_size_ = pop_size;
+	fitness_calculation_counter_ = 0;
 	mu_r_ = mu_r;
 	xo_r_ = xo_r;
 	xo_p_ = xo_p;
@@ -110,22 +124,25 @@ population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, u
 
 	pop_ = new specimen_t[pop_size_];
 	sig_fit_ = new FITNESS_TYPE[pop_size_];
+/*
 	best_ = new specimen_t*[NUMBER_TRACKING];
 	best_[0] = new specimen_t[NUMBER_GENERATIONS];
 	best_[1] = new specimen_t[NUMBER_GENERATIONS];
 	best_[2] = new specimen_t[NUMBER_GENERATIONS];
+*/
+	best_ = new specimen_t[NUMBER_TRACKING];
 }
 
-//population::~population(void)
-//{
-//	delete[] pop_;
-//	delete[] sig_fit_;
+population::~population(void)
+{
+	delete[] pop_;
+	delete[] sig_fit_;
 //	delete[] best_[2];
 //	delete[] best_[1];
 //	delete[] best_[0];
-//	delete[] best_;
-//}
-
+	delete[] best_;
+}
+/*
 specimen_t population::First (uint64_t gen_index)
 {
 	assert(gen_index<NUMBER_GENERATIONS);
@@ -141,6 +158,7 @@ specimen_t population::Third (uint64_t gen_index)
 	assert(gen_index<NUMBER_GENERATIONS);
 	return best_[2][gen_index];
 }
+*/
 
 void population::bestest(void)
 {
@@ -152,13 +170,9 @@ void population::bestest(void)
 	viter = std::unique(punk.begin(), punk.end(), spec_uniq);
 	punk.resize( std::distance(punk.begin(),viter) );
 
-//	for (it=loci.begin(); it!=loci.end(); it++)//++it)
-//		std::cout << ' ' << *it;
-
 	viter = punk.begin();
 
-
-
+/*
 	uint64_t jter=0;
 //	std::vector<specimen_t>::iterator viter = punk.begin();
 	best_[jter++][generation_] = (*viter);
@@ -178,6 +192,45 @@ void population::bestest(void)
 		best_[jter][generation_].gen = 0;
 		best_[jter++][generation_].fit = 0;
 	}
+*/
+/*
+	uint64_t jter=0;
+	best_[jter] = (*viter);
+	jter++; viter++;
+
+	while( (viter<punk.end()) && (jter<NUMBER_TRACKING) )
+	{
+		if ((*viter).gen != best_[jter].gen)
+		{
+			best_[jter++] = (*viter);
+		}
+		if (jter>NUMBER_TRACKING)
+			break;
+		viter++;
+	}
+	while (jter<NUMBER_TRACKING)
+	{
+		best_[jter].gen = 0;
+		best_[jter++].fit = 0;
+	}
+*/
+	uint64_t jter=0;
+	while( (viter<punk.end()) && (jter<NUMBER_TRACKING) )
+	{
+		best_[jter] = (*viter);
+		jter++; viter++;
+	}
+	while (jter<NUMBER_TRACKING)
+	{
+		best_[jter].gen = 0;
+		best_[jter++].fit = 0;
+	}
+
+
+	if (best_[0].fit > best_ever_.fit)
+	{
+		best_ever_ = best_[0];
+	}
 }
 
 
@@ -196,6 +249,10 @@ void population::populator(void)
 
 void population::breeder(void)
 {
+	// Check for lack of improvement in best individual (over 25 generations, then stop processing)
+	if (fitness_calculation_counter_ > (best_ever_.calced + (pop_size_ * 25)) )
+		return;
+
 	GENO_TYPE kiddies[pop_size_];
 	roulette();
 
@@ -213,8 +270,10 @@ void population::breeder(void)
 			kiddies[(2*iter)+0] = mama;
 			kiddies[(2*iter)+1] = papa;
 		}
-		kiddies[(2*iter)+0] = best_[0][generation_].gen;
-		kiddies[(2*iter)+1] = best_[0][generation_].gen;
+//		kiddies[(2*iter)+0] = best_[0][generation_].gen;
+//		kiddies[(2*iter)+1] = best_[0][generation_].gen;
+		kiddies[(2*iter)+0] = best_[0].gen;
+		kiddies[(2*iter)+1] = best_[0].gen;
 	}
 	else
 	{
@@ -254,7 +313,7 @@ void population::selector(GENO_TYPE& nana)
 {
 	uint64_t iter;
 	// Roulette Wheel Selection
-	FITNESS_TYPE temp = rudi_.uniform(0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
+	FITNESS_TYPE temp = rudi_.uniform((FITNESS_TYPE)0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
 
 	for (iter=0; iter<pop_size_; iter++)
 	{
@@ -297,8 +356,21 @@ void population::splicer(GENO_TYPE& mama, GENO_TYPE& papa)
 
 	it = loci.begin();
 
+/*
 	bool up=true;
 	for (iter=0; iter<xo_p_; iter++)
+	{
+		if ( (iter >= *it) && (it < loci.end()) )
+		{
+			it++;
+			up = ~up;
+		}
+		mask[iter] = up;
+	}
+*/
+
+	bool up=true;
+	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
 		if ( (iter >= *it) && (it < loci.end()) )
 		{
@@ -335,39 +407,35 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 	// Positive Likelihood
 	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
 	{
-		if (SymptomSet[iter])
+//		if (SymptomSet[iter] == 1)
+		if (SymptomSet[NUMBER_SYMPTOMS-(iter+1)] == 1)
 		{
 			temp = 1.0;
 			for (jter=0; jter<NUMBER_GENES; jter++)
 			{
-				if (genie[jter])//indi.gen[jter])
+//				if (genie[NUMBER_GENES-(jter+1)])
+				if (genie[jter])
 				{
 					temp *= (1.0-qManifestationInDisease[iter][jter]);
 				}
 			}
 			L1 *= (1.0-temp);
-			if ((1.0-temp)>ZERO_FITNESS_LIMIT)
-			{
-				L1 *= (1.0-temp);
-			}
-			else
-			{
-				L1 *= ZERO_FITNESS_LIMIT;
-			}
 		}
 	}
 
 	// Negative Likelihood
-	for (iter=0; iter<NUMBER_GENES; iter++)
+	for (jter=0; jter<NUMBER_GENES; jter++)
 	{
-		if (genie[iter])//indi.gen[iter])
+//		if (genie[NUMBER_GENES-(jter+1)])
+		if (genie[jter])
 		{
 			temp = 1.0;
-			for (jter=0; jter<NUMBER_SYMPTOMS; jter++)
+			for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
 			{
-				if (SymptomSet[jter] == 0)
+//				if (SymptomSet[iter] == 0)
+				if (SymptomSet[NUMBER_SYMPTOMS-(iter+1)] == 0)
 				{
-					temp *= (1.0-qManifestationInDisease[jter][iter]);
+					temp *= (1.0-qManifestationInDisease[iter][jter]);
 				}
 			}
 			L2 *= (temp);
@@ -375,13 +443,16 @@ FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
 	}
 
 	// Prior Likelihood
-	for (iter=0; iter<NUMBER_GENES; iter++)
+	for (jter=0; jter<NUMBER_GENES; jter++)
 	{
-		if (genie[iter])//indi.gen[iter])
+//		if (genie[NUMBER_GENES-(jter+1)])
+		if (genie[jter])
 		{
-			L3 *= qPriorLikelihood[iter];
+			L3 *= qPriorLikelihood[jter];
 		}
 	}
+
+	fitness_calculation_counter_++;
 
 //	indi.gen = genie;
 //	indi.fit = (L1 * L2 * L3);
@@ -395,6 +466,7 @@ specimen_t population::populate(void)
 	specimen_t indi;
 	indi.gen = rudi_.uniform(0, 1<<(NUMBER_GENES));
 	indi.fit = calcFitness(indi.gen);
+	indi.calced = fitness_calculation_counter_;
 	return indi;
 }
 
@@ -409,6 +481,7 @@ specimen_t population::mutate(specimen_t indi)
 		}
 	}
 	indi.fit = calcFitness(indi.gen);
+	indi.calced = fitness_calculation_counter_;
 	return indi;
 }
 
@@ -421,8 +494,9 @@ int main(int argc, char* argv[])
 	double xo_r = 0.4;
 	uint64_t xo_p = 1;
 	bool elitism = false;
-	uint64_t rng_seed = 0xF0F0F0F0;
-
+	uint64_t num_trials = NUMBER_TRIALS;
+//	uint64_t rng_seed = 0xF0F0F0F0;
+	bool enable_history = false;
 
 	double last_tick_count = 0.0;
 
@@ -430,13 +504,15 @@ int main(int argc, char* argv[])
     {
 		po::options_description desc("Allowed options");
 		desc.add_options()
-			("help", "Produce help message")
-			("ps", po::value<uint64_t>(), "Set Population Size")
-			("mr", po::value<double>(), "Set Mutation Rate")
-			("xr", po::value<double>(), "Set Crossover Rate")
-			("xp", po::value<uint64_t>(), "Set Maximum Number of Crossover Points")
-			("el", po::value<bool>(), "Enable Elitism")
-			("rng", po::value<uint64_t>(), "Set RNG seed")
+			("help",								"Produce help message")
+			("ps",		po::value<uint64_t>(),		"Set Population Size")
+			("mr",		po::value<double>(),		"Set Mutation Rate")
+			("xr",		po::value<double>(),		"Set Crossover Rate")
+			("xp",		po::value<uint64_t>(),		"Set Maximum Number of Crossover Points")
+			("el",		po::value<bool>(),			"Enable Elitism")
+			("trials",	po::value<uint64_t>(),		"Set Number of Trials")
+			("history",	po::value<bool>(),			"Enable History")
+//			("rng",		po::value<uint64_t>(),		"Set RNG seed")
 		;
 
 		po::variables_map vm;
@@ -490,6 +566,16 @@ int main(int argc, char* argv[])
 			cout << "Maximum number of crossover points was set to default of " << xo_p << ".\n";
 		}
 
+		if (vm.count("trials"))
+		{
+			num_trials = vm["trials"].as<uint64_t>();
+			cout << "Number of Trials was set to " << num_trials << ".\n";
+		}
+		else
+		{
+			cout << "Number of Trials was set to default of " << num_trials << ".\n";
+		}
+
 		if (vm.count("el"))
 		{
 			elitism = vm["el"].as<bool>();
@@ -500,7 +586,16 @@ int main(int argc, char* argv[])
 			cout << "Elitism was set to default of " << elitism << ".\n";
 		}
 
-
+		if (vm.count("enable_history"))
+		{
+			enable_history = vm["enable_history"].as<bool>();
+			cout << "History enabled: " << enable_history << ".\n";
+		}
+		else
+		{
+			cout << "History was set to default of " << enable_history << ".\n";
+		}
+/*
 		if (vm.count("rng"))
 		{
 			rng_seed = vm["rng"].as<uint64_t>();
@@ -510,7 +605,8 @@ int main(int argc, char* argv[])
 		{
 			cout << "OpenCV RNG was seeded with default of " << rng_seed << ".\n";
 		}
-    }
+*/
+	}
 	catch(std::exception& e)
 	{
 		cout << "error: " << e.what() << "\n";
@@ -523,65 +619,107 @@ int main(int argc, char* argv[])
 	}
 
 
-	RNG randi (rng_seed);
+//	RNG randi (rng_seed);
 
-	uint64_t iter;
+	uint64_t iter, jter;
 
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
 		qPriorLikelihood[iter] = ((qPriorProbability[iter])/(1.0-qPriorProbability[iter]));
+		if (qPriorLikelihood[iter] > (1.0-ZERO_FITNESS_LIMIT))
+			qPriorLikelihood[iter] = (1.0-ZERO_FITNESS_LIMIT);
+		if (qPriorLikelihood[iter] < ZERO_FITNESS_LIMIT)
+			qPriorLikelihood[iter] = ZERO_FITNESS_LIMIT;
 	}
 
+	for (iter=0; iter<NUMBER_SYMPTOMS; iter++)
+	{
+		for (jter=0; jter<NUMBER_GENES; jter++)
+		{
+			if (qManifestationInDisease[iter][jter] < ZERO_FITNESS_LIMIT)
+				qManifestationInDisease[iter][jter] = ZERO_FITNESS_LIMIT;
+		}
+	}
 
 	// Print data to file
 	stringstream strstr (stringstream::in | stringstream::out);
-	strstr.clear();	strstr.str("");
-	strstr << "./mfd"
-		<< "_" << pop_size
-		<< "_" << NUMBER_GENERATIONS
-		<< "_" << xo_p
-		<< "_" << xo_r
-		<< "_" << mu_r
-		<< "_" << elitism
-//			<< "_" << trailer_trash			// Current Trial
-//		<< "_" << SymptomSet
-		<< "_" << "first"
-		<< ".csv";
 	string outname;
-	outname = strstr.str();
 	ofstream outfileTheFirst;
-	outfileTheFirst.open( outname.c_str() );
-
-	if ( !outfileTheFirst.is_open() )
-	{
-		cerr << "Unable to open file: " << outname << "\n";
-		return 1;
-	}
-
-	strstr.clear();	strstr.str("");
-	strstr << "./mfd"
-		<< "_" << pop_size
-		<< "_" << NUMBER_GENERATIONS
-		<< "_" << xo_p
-		<< "_" << xo_r
-		<< "_" << mu_r
-		<< "_" << elitism
-//			<< "_" << trailer_trash			// Current Trial
-//		<< "_" << SymptomSet
-		<< "_" << "second"
-		<< ".csv";
-	outname = strstr.str();
 	ofstream outfileTheSecond;
-	outfileTheSecond.open( outname.c_str() );
+	ofstream outfileTheThird;
 
-	if ( !outfileTheSecond.is_open() )
+	if (enable_history)
 	{
-		cerr << "Unable to open file: " << outname << "\n";
-		return 1;
+		strstr.clear();	strstr.str("");
+		strstr << "./mfd"
+			<< "_" << pop_size
+			<< "_" << NUMBER_GENERATIONS
+			<< "_" << xo_p
+			<< "_" << xo_r
+			<< "_" << mu_r
+			<< "_" << elitism
+	//			<< "_" << trailer_trash			// Current Trial
+	//		<< "_" << SymptomSet
+			<< "_" << "first"
+			<< ".csv";
+		outname = strstr.str();
+		outfileTheFirst.open( outname.c_str() );
+
+		if ( !outfileTheFirst.is_open() )
+		{
+			cerr << "Unable to open file: " << outname << "\n";
+			return 1;
+		}
+
+		strstr.clear();	strstr.str("");
+		strstr << "./mfd"
+			<< "_" << pop_size
+			<< "_" << NUMBER_GENERATIONS
+			<< "_" << xo_p
+			<< "_" << xo_r
+			<< "_" << mu_r
+			<< "_" << elitism
+	//			<< "_" << trailer_trash			// Current Trial
+	//		<< "_" << SymptomSet
+			<< "_" << "second"
+			<< ".csv";
+		outname = strstr.str();
+		outfileTheSecond.open( outname.c_str() );
+
+		if ( !outfileTheSecond.is_open() )
+		{
+			cerr << "Unable to open file: " << outname << "\n";
+			return 1;
+		}
+
+		strstr.clear();	strstr.str("");
+		strstr << "./mfd"
+			<< "_" << pop_size
+			<< "_" << NUMBER_GENERATIONS
+			<< "_" << xo_p
+			<< "_" << xo_r
+			<< "_" << mu_r
+			<< "_" << elitism
+	//			<< "_" << trailer_trash			// Current Trial
+	//		<< "_" << SymptomSet
+			<< "_" << "third"
+			<< ".csv";
+		outname = strstr.str();
+		outfileTheThird.open( outname.c_str() );
+
+		if ( !outfileTheThird.is_open() )
+		{
+			cerr << "Unable to open file: " << outname << "\n";
+			return 1;
+		}
+
+		outfileTheFirst.precision(35);
+		outfileTheSecond.precision(35);
+		outfileTheThird.precision(35);
 	}
 
 	strstr.clear();	strstr.str("");
-	strstr << "./mfd"
+	strstr << "./mfd_best"
 		<< "_" << pop_size
 		<< "_" << NUMBER_GENERATIONS
 		<< "_" << xo_p
@@ -590,32 +728,38 @@ int main(int argc, char* argv[])
 		<< "_" << elitism
 //			<< "_" << trailer_trash			// Current Trial
 //		<< "_" << SymptomSet
-		<< "_" << "third"
 		<< ".csv";
 	outname = strstr.str();
-	ofstream outfileTheThird;
-	outfileTheThird.open( outname.c_str() );
+	ofstream outfileTheBest;
+	outfileTheBest.open( outname.c_str() );
 
-	if ( !outfileTheThird.is_open() )
+	if ( !outfileTheBest.is_open() )
 	{
 		cerr << "Unable to open file: " << outname << "\n";
 		return 1;
 	}
 
-	outfileTheFirst << "SymptomSet,Trial";
-	outfileTheSecond << "SymptomSet,Trial";
-	outfileTheThird << "SymptomSet,Trial";
+	outfileTheBest.precision(35);
 
-	for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+	if (enable_history)
 	{
-		outfileTheFirst << ",G" << iter;
-		outfileTheSecond << ",G" << iter;
-		outfileTheThird << ",G" << iter;
+		outfileTheFirst << "RNG_Seed,SymptomSet,Trial";
+		outfileTheSecond << "RNG_Seed,SymptomSet,Trial";
+		outfileTheThird << "RNG_Seed,SymptomSet,Trial";
+
+		for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+		{
+			outfileTheFirst << ",G" << iter;
+			outfileTheSecond << ",G" << iter;
+			outfileTheThird << ",G" << iter;
+		}
+
+		outfileTheFirst << "\n";
+		outfileTheSecond << "\n";
+		outfileTheThird << "\n";
 	}
 
-	outfileTheFirst << "\n";
-	outfileTheSecond << "\n";
-	outfileTheThird << "\n";
+	outfileTheBest << "RNG_Seed,SymptomSet,Trial,FitEvals,EndGen,Genotype,Fitness";
 
 	population *hoponpop;
 
@@ -628,17 +772,25 @@ int main(int argc, char* argv[])
 		cout << "Symptom set: " << SymptomSet << endl;
 
 		uint64_t trailer_trash;
-		for (trailer_trash=0; trailer_trash<NUMBER_TRIALS; trailer_trash++)
+		for (trailer_trash=0; trailer_trash<num_trials; trailer_trash++)
 		{
+			uint64_t rng_seed = getTickCount();
+			RNG randi (rng_seed);
+
 		// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
-//			population hoponpop(randi, pop_size, mu_r, xo_r, xo_p, elitism);
 			hoponpop = new population(randi, pop_size, mu_r, xo_r, xo_p, elitism);
 
 //			cout << "Trial: " << trailer_trash << endl;
+			if (trailer_trash==0)
+				cout << "Trial: ";
+			cout << trailer_trash << " ";
 
 //			hoponpop.populator();
 			hoponpop->populator();
 
+			specimen_t indiFirst [NUMBER_GENERATIONS];
+			specimen_t indiSecond[NUMBER_GENERATIONS];
+			specimen_t indiThird [NUMBER_GENERATIONS];
 
 			uint64_t generational_recursion;
 			for (generational_recursion=0; generational_recursion<NUMBER_GENERATIONS; generational_recursion++)
@@ -647,11 +799,16 @@ int main(int argc, char* argv[])
 //				hoponpop.breeder();
 				hoponpop->breeder();
 //				cout << "Generation over\n";
+
+				if (enable_history)
+				{
+					indiFirst[generational_recursion] = hoponpop->First ();
+					indiSecond[generational_recursion] = hoponpop->Second();
+					indiThird[generational_recursion] = hoponpop->Third ();
+				}
 			}
 
-			specimen_t indiFirst [NUMBER_GENERATIONS];
-			specimen_t indiSecond[NUMBER_GENERATIONS];
-			specimen_t indiThird [NUMBER_GENERATIONS];
+/*
 			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 			{
 //				indiFirst[iter] = hoponpop.First (iter);
@@ -661,49 +818,66 @@ int main(int argc, char* argv[])
 				indiSecond[iter] = hoponpop->Second(iter);
 				indiThird[iter] = hoponpop->Third (iter);
 			}
+*/
+			specimen_t bestever = hoponpop->BestEver();
+			uint64_t aged = hoponpop->Age();
+			outfileTheBest << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash << "," << bestever.calced << "," << aged << "," << bestever.gen << "," << bestever.fit;
 
-			outfileTheFirst << SymptomSet << "," << trailer_trash;
-			outfileTheSecond << SymptomSet << "," << trailer_trash;
-			outfileTheThird << SymptomSet << "," << trailer_trash;
-
-			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+			if (enable_history)
 			{
-				outfileTheFirst << "," << indiFirst[iter].gen;
-				outfileTheSecond << "," << indiSecond[iter].gen;
-				outfileTheThird << "," << indiThird[iter].gen;
-			}
-			outfileTheFirst << "\n" << SymptomSet << "," << trailer_trash;
-			outfileTheSecond << "\n" << SymptomSet << "," << trailer_trash;
-			outfileTheThird << "\n" << SymptomSet << "," << trailer_trash;
+				outfileTheFirst << rng_seed << "," << SymptomSet << "," << trailer_trash;
+				outfileTheSecond << rng_seed << "," << SymptomSet << "," << trailer_trash;
+				outfileTheThird << rng_seed << "," << SymptomSet << "," << trailer_trash;
 
+				for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+				{
+					outfileTheFirst << "," << indiFirst[iter].gen;
+					outfileTheSecond << "," << indiSecond[iter].gen;
+					outfileTheThird << "," << indiThird[iter].gen;
+				}
+				outfileTheFirst << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
+				outfileTheSecond << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
+				outfileTheThird << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
 
-			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
-			{
-				outfileTheFirst << "," << indiFirst[iter].fit;
-				outfileTheSecond << "," << indiSecond[iter].fit;
-				outfileTheThird << "," << indiThird[iter].fit;
+				for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+				{
+					outfileTheFirst << "," << indiFirst[iter].fit;
+					outfileTheSecond << "," << indiSecond[iter].fit;
+					outfileTheThird << "," << indiThird[iter].fit;
+				}
+				outfileTheFirst << "\n";
+				outfileTheSecond << "\n";
+				outfileTheThird << "\n";
 			}
+
+			delete hoponpop;
+		}//End of Trial
+		cout << endl;
+
+		if (enable_history)
+		{
 			outfileTheFirst << "\n";
 			outfileTheSecond << "\n";
 			outfileTheThird << "\n";
 
-			delete hoponpop;
-		}//End of Trial
+			outfileTheFirst.flush();
+			outfileTheSecond.flush();
+			outfileTheThird.flush();
+		}
 
-		outfileTheFirst << "\n";
-		outfileTheSecond << "\n";
-		outfileTheThird << "\n";
-
-		outfileTheFirst.flush();
-		outfileTheSecond.flush();
-		outfileTheThird.flush();
+		outfileTheBest << "\n";
+		outfileTheBest.flush();
 
 		cout << "\tProcessing time: " << ((double) getTickCount() - last_tick_count)/getTickFrequency() << "[s]\n";
 
 	}//End of Symptom Set
-	outfileTheFirst.close();
-	outfileTheSecond.close();
-	outfileTheThird.close();
+	if (enable_history)
+	{
+		outfileTheFirst.close();
+		outfileTheSecond.close();
+		outfileTheThird.close();
+	}
+	outfileTheBest.close();
 
 	return 0;
 }
