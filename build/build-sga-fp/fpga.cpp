@@ -1,20 +1,11 @@
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <bitset>
-#include "opencv2/core/core.hpp"
 
-#include <algorithm>
-#include <vector>
-#include <iterator>
-
-#include <boost/program_options.hpp>
 #include "fpga.hpp"
-
+/*
 using namespace cv;
 using namespace boost;
 namespace po = boost::program_options;
 using namespace std;
+*/
 
 typedef struct genotype_t
 {
@@ -27,7 +18,7 @@ typedef struct genotype_t
 
 typedef struct specimen_t
 {
-	specimen_t(void) : fit(0.0), gen(0), calced(0) {};
+	specimen_t(void) : fit(0.0), calced(0) {};
 
 	FITNESS_TYPE	fit;
 	genotype_t		gen;
@@ -236,7 +227,7 @@ void population::selector(genotype_t& nana)
 {
 	uint64_t iter;
 	// Roulette Wheel Selection
-	FITNESS_TYPE temp = rudi_.uniform((FITNESS_TYPE)0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
+	FITNESS_TYPE temp = rudi_.uniform(0, sig_fit_[pop_size_-1]);
 
 	for (iter=0; iter<pop_size_; iter++)
 	{
@@ -379,15 +370,15 @@ void population::fixer(specimen_t& indi)
 	{
 		if (genie.one[iter]==1)
 		{
-			genie.one[iter] &= West73_Adjacency.mask[iter];
+			genie.one[iter] &= West73_Adjacency[iter];
 		}
 		if (genie.two[iter]==1)
 		{
-			genie.two[iter] &= West73_Adjacency.mask[iter];
+			genie.two[iter] &= West73_Adjacency[iter];
 		}
 		if (genie.thr[iter]==1)
 		{
-			genie.thr[iter] &= West73_Adjacency.mask[iter];
+			genie.thr[iter] &= West73_Adjacency[iter];
 		}
 	}
 }
