@@ -379,6 +379,8 @@ specimen_t population::mutate(specimen_t indi)
 
 void population::fixer(specimen_t& indi)
 {
+// create randomized list of indices to decrease bias
+
 	// Fix for adjacency
 	uint64_t iter;
 	for (iter=0; iter<NUMBER_GENES; iter++)
@@ -397,6 +399,7 @@ void population::fixer(specimen_t& indi)
 		}
 	}
 
+// randimize order of harvest fixing (not always chronological)
 	// Fix for repeated harvesting
 	indi.gen.two &= ~indi.gen.one;
 	indi.gen.thr &= ~indi.gen.one;
