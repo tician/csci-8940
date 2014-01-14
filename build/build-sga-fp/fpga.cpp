@@ -262,6 +262,7 @@ void population::splicer(genotype_t& mama, genotype_t& papa)
 	std::sort (loci.begin(), loci.end(), loci_comp);
 
 	std::vector<uint64_t>::iterator it;
+
 	it = std::unique(loci.begin(), loci.end());
 	loci.resize( std::distance(loci.begin(),it) );
 
@@ -270,13 +271,14 @@ void population::splicer(genotype_t& mama, genotype_t& papa)
 	bool up=true;
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
-		if ( (iter >= *it) && (it < loci.end()) )
+		if ( (iter >= *it) && (it != loci.end()) )
 		{
-			it++;
-			up = ~up;
+			++it;
+			up ^= up;
 		}
 		mask[iter] = up;
 	}
+//	cout << "\n" << mask;
 
 	ba.one = ( mask & mama.one) | (~mask & papa.one) ;
 	by.one = (~mask & mama.one) | ( mask & papa.one) ;
@@ -332,7 +334,7 @@ specimen_t population::populate(void)
 	uint64_t iter;
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
-		uint64_t selec = rudi_.uniform(1,4);
+		uint64_t selec = rudi_.uniform(1,5);
 		if (selec == 1)
 		{
 			indi.gen.one.set(iter);
@@ -358,6 +360,29 @@ specimen_t population::mutate(specimen_t indi)
 	uint64_t iter;
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
+
+// Causes period two to always be null (retry after
+		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
+		{
+				indi.gen.one.flip(iter);
+				indi.gen.two.flip(iter);
+				indi.gen.thr.flip(iter);
+		}
+
+/*
+// Really crap results, but not null
+		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
+		{
+			uint64_t temp = rudi_.uniform( 1, 4 );
+			if (temp==1)
+				indi.gen.one.flip(iter);
+			else if (temp==2)
+				indi.gen.two.flip(iter);
+			else if (temp==3)
+				indi.gen.thr.flip(iter);
+		}
+*/
+/*
 		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
 		{
 			indi.gen.one.flip(iter);
@@ -370,6 +395,7 @@ specimen_t population::mutate(specimen_t indi)
 		{
 			indi.gen.thr.flip(iter);
 		}
+*/
 	}
 	fixer(indi);
 	indi.fit = calcFitness(indi.gen);
@@ -407,8 +433,8 @@ void population::fixer(specimen_t& indi)
 	}
 
 	// Fix for repeated harvesting
-	uint64_t temp = rudi_.uniform(0,3);
-	if (temp==0)
+	uint64_t temp = rudi_.uniform(1,4);
+	if (temp==1)
 	{
 		indi.gen.two &= ~indi.gen.one;
 		indi.gen.thr &= ~indi.gen.one;
@@ -419,7 +445,7 @@ void population::fixer(specimen_t& indi)
 		else
 			indi.gen.two &= ~indi.gen.thr;
 	}
-	else if (temp==1)
+	else if (temp==2)
 	{
 		indi.gen.one &= ~indi.gen.two;
 		indi.gen.thr &= ~indi.gen.two;
@@ -430,7 +456,7 @@ void population::fixer(specimen_t& indi)
 		else
 			indi.gen.one &= ~indi.gen.thr;
 	}
-	else if (temp==2)
+	else if (temp==3)
 	{
 		indi.gen.one &= ~indi.gen.thr;
 		indi.gen.two &= ~indi.gen.thr;

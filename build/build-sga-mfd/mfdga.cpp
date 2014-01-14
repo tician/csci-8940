@@ -375,7 +375,7 @@ void population::splicer(GENO_TYPE& mama, GENO_TYPE& papa)
 		if ( (iter >= *it) && (it < loci.end()) )
 		{
 			it++;
-			up = ~up;
+			up ^= up;
 		}
 		mask[iter] = up;
 	}
