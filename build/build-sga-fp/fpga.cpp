@@ -278,14 +278,14 @@ void population::splicer(genotype_t& mama, genotype_t& papa)
 		mask[iter] = up;
 	}
 
-	ba = ( mask & mama.one) | (~mask & papa.one) ;
-	by = (~mask & mama.one) | ( mask & papa.one) ;
+	ba.one = ( mask & mama.one) | (~mask & papa.one) ;
+	by.one = (~mask & mama.one) | ( mask & papa.one) ;
 
-	ba = ( mask & mama.two) | (~mask & papa.two) ;
-	by = (~mask & mama.two) | ( mask & papa.two) ;
+	ba.two = ( mask & mama.two) | (~mask & papa.two) ;
+	by.two = (~mask & mama.two) | ( mask & papa.two) ;
 
-	ba = ( mask & mama.two) | (~mask & papa.two) ;
-	by = (~mask & mama.two) | ( mask & papa.two) ;
+	ba.thr = ( mask & mama.two) | (~mask & papa.two) ;
+	by.thr = (~mask & mama.two) | ( mask & papa.two) ;
 
 	mama = ba;
 	papa = by;
@@ -303,11 +303,11 @@ void population::mutator(void)
 FITNESS_TYPE population::calcFitness(genotype_t genie)
 {
 	FITNESS_TYPE temp = 0;
-	uint64_t iter = 0, jter = 0;
+	uint64_t iter;
 
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
-		if (genie.one[iter)]==1)
+		if (genie.one[iter]==1)
 			temp += West73_Yields[iter].y1;
 		if (genie.two[iter]==1)
 			temp += West73_Yields[iter].y2;
@@ -323,9 +323,12 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 specimen_t population::populate(void)
 {
 	specimen_t indi;
-	indi.gen.one = rudi_.uniform(0, 1<<(NUMBER_GENES));
-	indi.gen.two = rudi_.uniform(0, 1<<(NUMBER_GENES));
-	indi.gen.thr = rudi_.uniform(0, 1<<(NUMBER_GENES));
+//	indi.gen.one = rudi_.uniform(0, 1<<(NUMBER_GENES));
+//	indi.gen.two = rudi_.uniform(0, 1<<(NUMBER_GENES));
+//	indi.gen.thr = rudi_.uniform(0, 1<<(NUMBER_GENES));
+	indi.gen.one = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
+	indi.gen.two = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
+	indi.gen.thr = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
 	fixer(indi);
 	indi.fit = calcFitness(indi.gen);
 	indi.calced = fitness_calculation_counter_;
@@ -368,17 +371,17 @@ void population::fixer(specimen_t& indi)
 	uint64_t iter;
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
-		if (genie.one[iter]==1)
+		if (indi.gen.one[iter]==1)
 		{
-			genie.one[iter] &= West73_Adjacency[iter];
+			indi.gen.one &= West73_Adjacency[iter];
 		}
-		if (genie.two[iter]==1)
+		if (indi.gen.two[iter]==1)
 		{
-			genie.two[iter] &= West73_Adjacency[iter];
+			indi.gen.two &= West73_Adjacency[iter];
 		}
-		if (genie.thr[iter]==1)
+		if (indi.gen.thr[iter]==1)
 		{
-			genie.thr[iter] &= West73_Adjacency[iter];
+			indi.gen.thr &= West73_Adjacency[iter];
 		}
 	}
 }
@@ -516,6 +519,19 @@ int main(int argc, char* argv[])
 	}
 
 
+	// Set up the bitset array that you could not initialize.
+	uint64_t iter;
+	for (iter=0; iter<NUMBER_GENES; iter++)
+	{
+		West73_Adjacency[iter].set();
+	}
+	for (iter=0; iter<196; iter++)
+	{
+		West73_Adjacency[West73_Adjacency_builder[iter].id-1].reset(West73_Adjacency_builder[iter].ad-1);
+	}
+
+
+
 	// Print data to file
 	stringstream strstr (stringstream::in | stringstream::out);
 	string outname;
@@ -618,15 +634,15 @@ int main(int argc, char* argv[])
 
 	if (enable_history)
 	{
-		outfileTheFirst << "RNG_Seed,SymptomSet,Trial";
-		outfileTheSecond << "RNG_Seed,SymptomSet,Trial";
-		outfileTheThird << "RNG_Seed,SymptomSet,Trial";
+		outfileTheFirst << "RNG_Seed,Trial";
+		outfileTheSecond << "RNG_Seed,Trial";
+		outfileTheThird << "RNG_Seed,Trial";
 
 		for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 		{
-			outfileTheFirst << ",G" << iter;
-			outfileTheSecond << ",G" << iter;
-			outfileTheThird << ",G" << iter;
+			outfileTheFirst << ",Ga" << iter << ",Gb" << iter << ",Gc" << iter;
+			outfileTheSecond << ",Ga" << iter << ",Gb" << iter << ",Gc" << iter;
+			outfileTheThird << ",Ga" << iter << ",Gb" << iter << ",Gc" << iter;
 		}
 
 		outfileTheFirst << "\n";
@@ -634,120 +650,103 @@ int main(int argc, char* argv[])
 		outfileTheThird << "\n";
 	}
 
-	outfileTheBest << "NumGens,PopSize,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Genotype,Fitness";
+	outfileTheBest << "NumGens,PopSize,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
 
 	population *hoponpop;
 
-	uint64_t symptoms;
-	for (symptoms=1; symptoms<(1<<NUMBER_SYMPTOMS); symptoms++)
+
+	last_tick_count = (double) getTickCount();
+
+	uint64_t trailer_trash;
+	for (trailer_trash=0; trailer_trash<num_trials; trailer_trash++)
 	{
-		SymptomSet = symptoms;
+		uint64_t rng_seed = getTickCount();
+		RNG randi (rng_seed);
 
-		last_tick_count = (double) getTickCount();
-		cout << "Symptom set: " << SymptomSet << endl;
+	// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
+		hoponpop = new population(randi, pop_size, mu_r, xo_r, xo_p, elitism);
 
-		uint64_t trailer_trash;
-		for (trailer_trash=0; trailer_trash<num_trials; trailer_trash++)
+//		cout << "Trial: " << trailer_trash << endl;
+		if (trailer_trash==0)
+			cout << "Trial: ";
+		cout << trailer_trash << " ";
+
+		hoponpop->populator();
+
+		specimen_t indiFirst [NUMBER_GENERATIONS];
+		specimen_t indiSecond[NUMBER_GENERATIONS];
+		specimen_t indiThird [NUMBER_GENERATIONS];
+
+		uint64_t generational_recursion;
+		for (generational_recursion=0; generational_recursion<NUMBER_GENERATIONS; generational_recursion++)
 		{
-			uint64_t rng_seed = getTickCount();
-			RNG randi (rng_seed);
-
-		// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
-			hoponpop = new population(randi, pop_size, mu_r, xo_r, xo_p, elitism);
-
-//			cout << "Trial: " << trailer_trash << endl;
-			if (trailer_trash==0)
-				cout << "Trial: ";
-			cout << trailer_trash << " ";
-
-//			hoponpop.populator();
-			hoponpop->populator();
-
-			specimen_t indiFirst [NUMBER_GENERATIONS];
-			specimen_t indiSecond[NUMBER_GENERATIONS];
-			specimen_t indiThird [NUMBER_GENERATIONS];
-
-			uint64_t generational_recursion;
-			for (generational_recursion=0; generational_recursion<NUMBER_GENERATIONS; generational_recursion++)
-			{
-//				cout << "Generation: " << generational_recursion << endl;
-//				hoponpop.breeder();
-				hoponpop->breeder();
-//				cout << "Generation over\n";
-
-				if (enable_history)
-				{
-					indiFirst[generational_recursion] = hoponpop->First ();
-					indiSecond[generational_recursion] = hoponpop->Second();
-					indiThird[generational_recursion] = hoponpop->Third ();
-				}
-			}
-
-/*
-			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
-			{
-//				indiFirst[iter] = hoponpop.First (iter);
-//				indiSecond[iter] = hoponpop.Second(iter);
-//				indiThird[iter] = hoponpop.Third (iter);
-				indiFirst[iter] = hoponpop->First (iter);
-				indiSecond[iter] = hoponpop->Second(iter);
-				indiThird[iter] = hoponpop->Third (iter);
-			}
-*/
-			specimen_t bestever = hoponpop->BestEver();
-			uint64_t aged = hoponpop->Age();
-//			outfileTheBest << "NumGens,PopSize,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Genotype,Fitness";
-			outfileTheBest << "\n" << NUMBER_GENERATIONS << "," << pop_size << "," << xo_p << "," << xo_r << "," << mu_r << "," << elitism << ","
-			<< rng_seed << "," << SymptomSet << "," << trailer_trash << "," << bestever.calced << "," << aged << "," << bestever.gen << "," << bestever.fit;
+//			cout << "Generation: " << generational_recursion << endl;
+//			hoponpop.breeder();
+			hoponpop->breeder();
+//			cout << "Generation over\n";
 
 			if (enable_history)
 			{
-				outfileTheFirst << rng_seed << "," << SymptomSet << "," << trailer_trash;
-				outfileTheSecond << rng_seed << "," << SymptomSet << "," << trailer_trash;
-				outfileTheThird << rng_seed << "," << SymptomSet << "," << trailer_trash;
-
-				for (iter=0; iter<NUMBER_GENERATIONS; iter++)
-				{
-					outfileTheFirst << "," << indiFirst[iter].gen;
-					outfileTheSecond << "," << indiSecond[iter].gen;
-					outfileTheThird << "," << indiThird[iter].gen;
-				}
-				outfileTheFirst << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
-				outfileTheSecond << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
-				outfileTheThird << "\n" << rng_seed << "," << SymptomSet << "," << trailer_trash;
-
-				for (iter=0; iter<NUMBER_GENERATIONS; iter++)
-				{
-					outfileTheFirst << "," << indiFirst[iter].fit;
-					outfileTheSecond << "," << indiSecond[iter].fit;
-					outfileTheThird << "," << indiThird[iter].fit;
-				}
-				outfileTheFirst << "\n";
-				outfileTheSecond << "\n";
-				outfileTheThird << "\n";
+				indiFirst[generational_recursion] = hoponpop->First ();
+				indiSecond[generational_recursion] = hoponpop->Second();
+				indiThird[generational_recursion] = hoponpop->Third ();
 			}
+		}
 
-			delete hoponpop;
-		}//End of Trial
-		cout << endl;
+		specimen_t bestever = hoponpop->BestEver();
+		uint64_t aged = hoponpop->Age();
+//		outfileTheBest << "NumGens,PopSize,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
+		outfileTheBest << "\n" << NUMBER_GENERATIONS << "," << pop_size << "," << xo_p << "," << xo_r << "," << mu_r << "," << elitism << ","
+		<< rng_seed << "," << trailer_trash << "," << bestever.calced << "," << aged << ","
+		<< bestever.gen.one << "," << bestever.gen.two << "," << bestever.gen.thr << "," << bestever.fit;
 
 		if (enable_history)
 		{
+			outfileTheFirst << rng_seed << ","<< trailer_trash;
+			outfileTheSecond << rng_seed << ","<< trailer_trash;
+			outfileTheThird << rng_seed << ","<< trailer_trash;
+
+			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+			{
+				outfileTheFirst << "," << indiFirst[iter].gen.one << "," << indiFirst[iter].gen.two << "," << indiFirst[iter].gen.thr;
+				outfileTheSecond << "," << indiSecond[iter].gen.one << "," << indiFirst[iter].gen.two << "," << indiFirst[iter].gen.thr;
+				outfileTheThird << "," << indiThird[iter].gen.one << "," << indiFirst[iter].gen.two << "," << indiFirst[iter].gen.thr;
+			}
+			outfileTheFirst << "\n" << rng_seed << "," << trailer_trash;
+			outfileTheSecond << "\n" << rng_seed << "," << trailer_trash;
+			outfileTheThird << "\n" << rng_seed << "," << trailer_trash;
+
+			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
+			{
+				outfileTheFirst << "," << indiFirst[iter].fit;
+				outfileTheSecond << "," << indiSecond[iter].fit;
+				outfileTheThird << "," << indiThird[iter].fit;
+			}
 			outfileTheFirst << "\n";
 			outfileTheSecond << "\n";
 			outfileTheThird << "\n";
-
-			outfileTheFirst.flush();
-			outfileTheSecond.flush();
-			outfileTheThird.flush();
 		}
 
-		outfileTheBest << "\n";
-		outfileTheBest.flush();
+		delete hoponpop;
+	}//End of Trial
+	cout << endl;
 
-		cout << "\tProcessing time: " << ((double) getTickCount() - last_tick_count)/getTickFrequency() << "[s]\n";
+	if (enable_history)
+	{
+		outfileTheFirst << "\n";
+		outfileTheSecond << "\n";
+		outfileTheThird << "\n";
 
-	}//End of Symptom Set
+		outfileTheFirst.flush();
+		outfileTheSecond.flush();
+		outfileTheThird.flush();
+	}
+
+	outfileTheBest << "\n";
+	outfileTheBest.flush();
+
+	cout << "\tProcessing time: " << ((double) getTickCount() - last_tick_count)/getTickFrequency() << "[s]\n";
+
 	if (enable_history)
 	{
 		outfileTheFirst.close();
