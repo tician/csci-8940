@@ -379,31 +379,72 @@ specimen_t population::mutate(specimen_t indi)
 
 void population::fixer(specimen_t& indi)
 {
-// create randomized list of indices to decrease bias
-
-	// Fix for adjacency
 	uint64_t iter;
+
+	// Randomize list of indices to decrease bias
+	Mat lister(1, NUMBER_GENES, CV_8UC1);
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
-		if (indi.gen.one[iter]==1)
+		lister.at<uint8_t>(iter) = iter;
+	}
+	randShuffle(lister, 1, &rudi_);
+
+	// Fix for adjacency
+	for (iter=0; iter<NUMBER_GENES; iter++)
+	{
+		if (indi.gen.one[lister.at<uint8_t>(iter)]==1)
 		{
-			indi.gen.one &= West73_Adjacency[iter];
+			indi.gen.one &= West73_Adjacency[lister.at<uint8_t>(iter)];
 		}
-		if (indi.gen.two[iter]==1)
+		if (indi.gen.two[lister.at<uint8_t>(iter)]==1)
 		{
-			indi.gen.two &= West73_Adjacency[iter];
+			indi.gen.two &= West73_Adjacency[lister.at<uint8_t>(iter)];
 		}
-		if (indi.gen.thr[iter]==1)
+		if (indi.gen.thr[lister.at<uint8_t>(iter)]==1)
 		{
-			indi.gen.thr &= West73_Adjacency[iter];
+			indi.gen.thr &= West73_Adjacency[lister.at<uint8_t>(iter)];
 		}
 	}
 
-// randimize order of harvest fixing (not always chronological)
 	// Fix for repeated harvesting
-	indi.gen.two &= ~indi.gen.one;
-	indi.gen.thr &= ~indi.gen.one;
-	indi.gen.thr &= ~indi.gen.two;
+	uint64_t temp = rudi_.uniform(0,3);
+	if (temp==0)
+	{
+		indi.gen.two &= ~indi.gen.one;
+		indi.gen.thr &= ~indi.gen.one;
+
+		temp = rudi_.uniform(0,2);
+		if (temp==0)
+			indi.gen.thr &= ~indi.gen.two;
+		else
+			indi.gen.two &= ~indi.gen.thr;
+	}
+	else if (temp==1)
+	{
+		indi.gen.one &= ~indi.gen.two;
+		indi.gen.thr &= ~indi.gen.two;
+
+		temp = rudi_.uniform(0,2);
+		if (temp==0)
+			indi.gen.thr &= ~indi.gen.one;
+		else
+			indi.gen.one &= ~indi.gen.thr;
+	}
+	else if (temp==2)
+	{
+		indi.gen.one &= ~indi.gen.thr;
+		indi.gen.two &= ~indi.gen.thr;
+
+		temp = rudi_.uniform(0,2);
+		if (temp==0)
+			indi.gen.two &= ~indi.gen.one;
+		else
+			indi.gen.one &= ~indi.gen.two;
+	}
+
+//	indi.gen.two &= ~indi.gen.one;
+//	indi.gen.thr &= ~indi.gen.one;
+//	indi.gen.thr &= ~indi.gen.two;
 }
 
 
