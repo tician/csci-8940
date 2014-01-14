@@ -166,7 +166,7 @@ void population::populator(void)
 void population::breeder(void)
 {
 	// Check for lack of improvement in best individual (over 25 generations without improvement, then stop processing)
-	if (fitness_calculation_counter_ > (best_ever_.calced + (pop_size_ * 25)) )
+	if (fitness_calculation_counter_ > (best_ever_.calced + (pop_size_ * 2500)) )
 		return;
 
 	genotype_t kiddies[pop_size_];
@@ -227,7 +227,7 @@ void population::selector(genotype_t& nana)
 {
 	uint64_t iter;
 	// Roulette Wheel Selection
-	FITNESS_TYPE temp = rudi_.uniform(0, sig_fit_[pop_size_-1]);
+	FITNESS_TYPE temp = rudi_.uniform((FITNESS_TYPE) 0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
 
 	for (iter=0; iter<pop_size_; iter++)
 	{
@@ -308,11 +308,11 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
 		if (genie.one[iter]==1)
-			temp += West73_Yields[iter].y1;
+			temp += West73_Yields[iter].Y1;
 		if (genie.two[iter]==1)
-			temp += West73_Yields[iter].y2;
+			temp += West73_Yields[iter].Y2;
 		if (genie.thr[iter]==1)
-			temp += West73_Yields[iter].y3;
+			temp += West73_Yields[iter].Y3;
 	}
 
 	fitness_calculation_counter_++;
@@ -326,9 +326,27 @@ specimen_t population::populate(void)
 //	indi.gen.one = rudi_.uniform(0, 1<<(NUMBER_GENES));
 //	indi.gen.two = rudi_.uniform(0, 1<<(NUMBER_GENES));
 //	indi.gen.thr = rudi_.uniform(0, 1<<(NUMBER_GENES));
-	indi.gen.one = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
-	indi.gen.two = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
-	indi.gen.thr = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
+//	indi.gen.one = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
+//	indi.gen.two = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
+//	indi.gen.thr = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
+	uint64_t iter;
+	for (iter=0; iter<NUMBER_GENES; iter++)
+	{
+		uint64_t selec = rudi_.uniform(1,4);
+		if (selec == 1)
+		{
+			indi.gen.one.set(iter);
+		}
+		else if (selec == 2)
+		{
+			indi.gen.two.set(iter);
+		}
+		if (selec == 3)
+		{
+			indi.gen.thr.set(iter);
+		}
+	}
+
 	fixer(indi);
 	indi.fit = calcFitness(indi.gen);
 	indi.calced = fitness_calculation_counter_;
@@ -361,12 +379,6 @@ specimen_t population::mutate(specimen_t indi)
 
 void population::fixer(specimen_t& indi)
 {
-	// Fix for repeated harvesting
-	indi.gen.two &= ~indi.gen.one;
-	indi.gen.thr &= ~indi.gen.one;
-	indi.gen.thr &= ~indi.gen.two;
-
-
 	// Fix for adjacency
 	uint64_t iter;
 	for (iter=0; iter<NUMBER_GENES; iter++)
@@ -384,6 +396,11 @@ void population::fixer(specimen_t& indi)
 			indi.gen.thr &= West73_Adjacency[iter];
 		}
 	}
+
+	// Fix for repeated harvesting
+	indi.gen.two &= ~indi.gen.one;
+	indi.gen.thr &= ~indi.gen.one;
+	indi.gen.thr &= ~indi.gen.two;
 }
 
 
@@ -486,9 +503,9 @@ int main(int argc, char* argv[])
 			cout << "Elitism was set to default of " << elitism << ".\n";
 		}
 
-		if (vm.count("enable_history"))
+		if (vm.count("history"))
 		{
-			enable_history = vm["enable_history"].as<bool>();
+			enable_history = vm["history"].as<bool>();
 			cout << "History enabled: " << enable_history << ".\n";
 		}
 		else
@@ -524,6 +541,9 @@ int main(int argc, char* argv[])
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
 		West73_Adjacency[iter].set();
+		West73_Yields[iter].Y1 = West73_Yields[iter].y1 * West73_Yields[iter].area;
+		West73_Yields[iter].Y2 = West73_Yields[iter].y2 * West73_Yields[iter].area;
+		West73_Yields[iter].Y3 = West73_Yields[iter].y3 * West73_Yields[iter].area;
 	}
 	for (iter=0; iter<196; iter++)
 	{
@@ -630,7 +650,8 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	outfileTheBest.precision(35);
+//	outfileTheBest.precision(35);
+	uint64_t best_default_precision = outfileTheBest.precision();
 
 	if (enable_history)
 	{
@@ -696,9 +717,11 @@ int main(int argc, char* argv[])
 		specimen_t bestever = hoponpop->BestEver();
 		uint64_t aged = hoponpop->Age();
 //		outfileTheBest << "NumGens,PopSize,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
-		outfileTheBest << "\n" << NUMBER_GENERATIONS << "," << pop_size << "," << xo_p << "," << xo_r << "," << mu_r << "," << elitism << ","
-		<< rng_seed << "," << trailer_trash << "," << bestever.calced << "," << aged << ","
-		<< bestever.gen.one << "," << bestever.gen.two << "," << bestever.gen.thr << "," << bestever.fit;
+		outfileTheBest.precision(best_default_precision);
+		outfileTheBest << "\n" << NUMBER_GENERATIONS << "," << pop_size << "," << xo_p << "," << xo_r << "," << mu_r << "," << elitism << ",";
+		outfileTheBest << rng_seed << "," << trailer_trash << "," << bestever.calced << "," << aged << ",";
+		outfileTheBest.precision(35);
+		outfileTheBest << bestever.gen.one << "," << bestever.gen.two << "," << bestever.gen.thr << "," << bestever.fit;
 
 		if (enable_history)
 		{
