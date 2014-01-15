@@ -375,7 +375,11 @@ void population::splicer(GENO_TYPE& mama, GENO_TYPE& papa)
 		if ( (iter >= *it) && (it < loci.end()) )
 		{
 			++it;
-			up ^= up;
+			if (up)
+				up = false;
+			else
+				up = true;
+//			up ^= up;
 		}
 		mask[iter] = up;
 	}
@@ -587,9 +591,9 @@ int main(int argc, char* argv[])
 			cout << "Elitism was set to default of " << elitism << ".\n";
 		}
 
-		if (vm.count("enable_history"))
+		if (vm.count("history"))
 		{
-			enable_history = vm["enable_history"].as<bool>();
+			enable_history = vm["history"].as<bool>();
 			cout << "History enabled: " << enable_history << ".\n";
 		}
 		else

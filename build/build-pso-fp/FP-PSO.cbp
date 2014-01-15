@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="FP-PSO" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/fppso" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/fppso" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add directory="/opt/opencv/2.4.4/include" />
+			<Add directory="/usr/include/boost" />
+		</Compiler>
+		<Linker>
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_calib3d.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_contrib.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_core.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_features2d.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_flann.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_highgui.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_imgproc.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_legacy.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_ml.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_objdetect.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_photo.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_ts.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_video.so" />
+			<Add library="/opt/opencv/2.4.4/lib/libopencv_videostab.so" />
+			<Add library="/usr/lib/libboost_program_options.so" />
+		</Linker>
+		<Unit filename="fppso.hpp"/>
+		<Unit filename="fppso.cpp" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
