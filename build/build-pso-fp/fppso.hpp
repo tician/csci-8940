@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <vector>
 #include <iterator>
+#include <array>
 
 #include <boost/program_options.hpp>
 
@@ -21,13 +22,12 @@ using namespace std;
 #define NUMBER_GENERATIONS			30000
 
 #define NUMBER_TRACKING				3
-#define NUMBER_GENES				73
-#define NUMBER_ATTRIBUTES			NUMBER_GENES*3
+#define NUMBER_DIMENSIONS			73
 
 
 #define FITNESS_TYPE				double
-#define GENO_TYPE					bitset<NUMBER_GENES>
-#define	GENOME_TYPE					bitset<NUMBER_ATTRIBUTES>
+
+#define GENO_TYPE					bitset<NUMBER_DIMENSIONS>
 
 typedef struct
 {
@@ -114,7 +114,8 @@ fp_volume_t West73_Yields[] =
 	{73,5.826,49,60,69,0.0,0.0,0.0}
 };
 
-GENO_TYPE West73_Adjacency[NUMBER_ATTRIBUTES];
+GENO_TYPE West73_Adjacency[NUMBER_DIMENSIONS];
+GENO_TYPE West73_NotAdjacency[NUMBER_DIMENSIONS];
 
 typedef struct
 {

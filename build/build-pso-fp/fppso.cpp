@@ -1,32 +1,28 @@
 
 #include "fppso.hpp"
 
-typedef union genotype_t
+typedef struct genotype_t
 {
-	genotype_t(void) { all=0; };
+	genotype_t(void) : one(0), two(0), thr(0) {};
 
-	GENOME_TYPE	all;
-	struct
-	{
-		GENO_TYPE	one;
-		GENO_TYPE	two;
-		GENO_TYPE	thr;
-	} sep;
+	GENO_TYPE one, two, thr;
+
+	void clear(void) { one = 0; two = 0; thr = 0; };
 };
 
 typedef struct particle_t
 {
 	particle_t(void) {
 		uint64_t iter;
-		for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+		for (iter=0; iter<NUMBER_DIMENSIONS; iter++)
 		{
 			pos[iter] = 0.0;
 			vel[iter] = 0.0;
 		}
 	};
 
-	double pos[NUMBER_ATTRIBUTES];
-	double vel[NUMBER_ATTRIBUTES];
+	double pos[NUMBER_DIMENSIONS];
+	double vel[NUMBER_DIMENSIONS];
 };
 
 typedef struct specimen_t
@@ -43,7 +39,17 @@ typedef struct specimen_t
 };
 
 bool spec_comp (specimen_t i, specimen_t j) { return (i.fit>j.fit); }
-bool spec_uniq (specimen_t i, specimen_t j) { return (i.gen.all==j.gen.all); }
+bool spec_uniq (specimen_t i, specimen_t j)
+{
+	if (i.gen.one != j.gen.one)
+		return false;
+	if (i.gen.two != j.gen.two)
+		return false;
+	if (i.gen.thr != j.gen.thr)
+		return false;
+
+	return true;
+}
 
 
 class population
@@ -73,6 +79,7 @@ public:
 	~population(void);
 	void populator(void);
 	void iterate(void);
+	void fixer(specimen_t&);
 
 	specimen_t First (void){return best_[0];}
 	specimen_t Second(void){return best_[1];}
@@ -125,7 +132,7 @@ void population::bestest(void)
 	}
 	while (jter<NUMBER_TRACKING)
 	{
-		best_[jter].gen.all = 0;
+		best_[jter].gen.clear();
 		best_[jter++].fit = 0;
 	}
 
@@ -152,8 +159,6 @@ void population::populator(void)
 
 void population::iterate(void)
 {
-//	GENO_TYPE kiddies[pop_size_];
-
 	// Check for lack of improvement in best particle (over 25 iterations, then stop processing)
 	if (fitness_calculation_counter_ > (best_in_swarm_.calced + (pop_size_ * 25)) )
 		return;
@@ -162,24 +167,28 @@ void population::iterate(void)
 
 	for (iter=0; iter<pop_size_; iter++)
 	{
-		for (jter=0; jter<NUMBER_ATTRIBUTES; jter++)
+		for (jter=0; jter<NUMBER_DIMENSIONS; jter++)
 		{
+			// Update velocity
 			pop_[iter].cc.vel[jter] =	(pop_[iter].cc.vel[jter] * inertia_)
 				+ ( (rudi_.uniform((double)0.0,(double)1.0) * cog_) * (pop_[iter].bc.pos[jter]     - pop_[iter].cc.pos[jter]) )
 				+ ( (rudi_.uniform((double)0.0,(double)1.0) * soc_) * (best_in_swarm_.cc.pos[jter] - pop_[iter].cc.pos[jter]) );
 
-//			pop_[iter].cc[jter].vel = (pop_[iter].cc[jter].vel * inertia_) + (pop_[iter].cc[jter].vel * cog_) + (best_in_swarm_[jter].vel * soc_);
 			if (pop_[iter].cc.vel[jter] > max_.vel[jter])
 				pop_[iter].cc.vel[jter] = max_.vel[jter];
 			else if (pop_[iter].cc.vel[jter] < min_.vel[jter])
 				pop_[iter].cc.vel[jter] = min_.vel[jter];
 
-//			pop_[iter].cc.pos[jter] = pop_[iter].cc.pos[jter] + (pop_[iter].cc.vel[jter] * 1.0);//time__);
-//			if (pop_[iter].cc.pos[jter] > max_.pos[jter])
-//				pop_[iter].cc.pos[jter] = max_.pos[jter];
-//			else if (pop_[iter].cc.pos[jter] < min_.pos[jter])
-//				pop_[iter].cc.pos[jter] = min_.pos[jter];
+			// Update position
+			pop_[iter].cc.pos[jter] += pop_[iter].cc.vel[jter];
+
+			if (pop_[iter].cc.pos[jter] > max_.pos[jter])
+				pop_[iter].cc.pos[jter] = max_.pos[jter];
+			else if (pop_[iter].cc.pos[jter] < min_.pos[jter])
+				pop_[iter].cc.pos[jter] = min_.pos[jter];
+
 /*
+			// discretize
 			if ( rudi_.uniform((double)0.0,(double)1.0) < (double)( 1.0/ (1.0+exp(pop_[iter].cc.vel[jter] * -1.0)) ) )
 			{
 				pop_[iter].cc.pos[jter] = 1.0;
@@ -193,6 +202,7 @@ void population::iterate(void)
 */
 		}
 		discretize(pop_[iter]);
+		fixer(pop_[iter]);
 //		pop_[iter].gen = discretize(pop_[iter].cc);
 		pop_[iter].fit = calcFitness(pop_[iter].gen);
 		pop_[iter].calced = fitness_calculation_counter_;
@@ -214,13 +224,13 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 	FITNESS_TYPE temp = 0;
 	uint64_t iter;
 
-	for (iter=0; iter<NUMBER_GENES; iter++)
+	for (iter=0; iter<NUMBER_DIMENSIONS; iter++)
 	{
-		if (genie.sep.one[iter]==1)
+		if (genie.one[iter]==1)
 			temp += West73_Yields[iter].Y1;
-		if (genie.sep.two[iter]==1)
+		else if (genie.two[iter]==1)
 			temp += West73_Yields[iter].Y2;
-		if (genie.sep.thr[iter]==1)
+		else if (genie.thr[iter]==1)
 			temp += West73_Yields[iter].Y3;
 	}
 
@@ -234,7 +244,7 @@ specimen_t population::populate(void)
 	specimen_t indi;
 	uint64_t iter;
 
-	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+	for (iter=0; iter<NUMBER_DIMENSIONS; iter++)
 	{
 		indi.cc.vel[iter] = rudi_.uniform((double)min_.vel[iter],(double)max_.vel[iter]);
 		indi.cc.pos[iter] = rudi_.uniform((double)min_.pos[iter],(double)max_.pos[iter]);
@@ -242,6 +252,7 @@ specimen_t population::populate(void)
 
 //	indi.gen = discretize(indi.cc);
 	discretize(indi);
+	fixer(indi);
 	indi.fit = calcFitness(indi.gen);
 	indi.calced = fitness_calculation_counter_;
 	indi.bc = indi.cc;
@@ -253,7 +264,7 @@ GENO_TYPE population::discretize(particle_t par)
 {
 	GENO_TYPE genie;
 	uint64_t iter;
-	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+	for (iter=0; iter<NUMBER_DIMENSIONS; iter++)
 	{
 		if (par.pos[iter] > 0.5)
 			genie[iter] = 1;
@@ -266,20 +277,154 @@ GENO_TYPE population::discretize(particle_t par)
 void population::discretize(specimen_t& par)
 {
 	uint64_t iter;
-	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+	for (iter=0; iter<NUMBER_DIMENSIONS; iter++)
 	{
+/*
 		if ( rudi_.uniform((double)0.0,(double)1.0) < (double)( 1.0/ (1.0+exp(par.cc.vel[iter] * -1.0)) ) )
 		{
 			par.cc.pos[iter] = 1.0;
-			par.gen.all[iter] = 1;
+			par.gen[iter] = 1;
 		}
 		else
 		{
 			par.cc.pos[iter] = 0.0;
-			par.gen.all[iter] = 0;
+			par.gen[iter] = 0;
+		}
+*/
+		if ( floor(par.cc.pos[iter]) == 0 )
+		{
+			par.gen.one[iter] = 0;
+			par.gen.two[iter] = 0;
+			par.gen.thr[iter] = 0;
+		}
+		else if ( floor(par.cc.pos[iter]) == 1 )
+		{
+			par.gen.one[iter] = 1;
+			par.gen.two[iter] = 0;
+			par.gen.thr[iter] = 0;
+		}
+		else if ( floor(par.cc.pos[iter]) == 2 )
+		{
+			par.gen.one[iter] = 0;
+			par.gen.two[iter] = 1;
+			par.gen.thr[iter] = 0;
+		}
+		else if ( floor(par.cc.pos[iter]) == 3 )
+		{
+			par.gen.one[iter] = 0;
+			par.gen.two[iter] = 0;
+			par.gen.thr[iter] = 1;
 		}
 	}
 }
+
+void population::fixer(specimen_t& indi)
+{
+	uint64_t iter, jter;
+
+	// Randomize list of indices to decrease bias
+	Mat lister(1, NUMBER_DIMENSIONS, CV_8UC1);
+	for (iter=0; iter<NUMBER_DIMENSIONS; iter++)
+	{
+		lister.at<uint8_t>(iter) = iter;
+	}
+	randShuffle(lister, 1, &rudi_);
+
+	GENO_TYPE checker;
+	// Fix for adjacency
+	for (iter=0; iter<NUMBER_DIMENSIONS; iter++)
+	{
+		if (indi.gen.one[lister.at<uint8_t>(iter)]==1)
+		{
+			// Fix particle
+			checker = West73_Adjacency[lister.at<uint8_t>(iter)] & indi.gen.one;
+			if (checker.any())
+			{
+				for (jter=0; jter<NUMBER_DIMENSIONS; jter++)
+				{
+					if (checker[iter]==1)
+						indi.cc.pos[iter] = rudi_.uniform(0.0,1.0);
+				}
+			}
+
+			// Fix genotype
+			indi.gen.one &= West73_NotAdjacency[lister.at<uint8_t>(iter)];
+		}
+		else if (indi.gen.two[lister.at<uint8_t>(iter)]==1)
+		{
+			// Fix particle
+			checker = West73_Adjacency[lister.at<uint8_t>(iter)] & indi.gen.two;
+			if (checker.any())
+			{
+				for (jter=0; jter<NUMBER_DIMENSIONS; jter++)
+				{
+					if (checker[iter]==1)
+						indi.cc.pos[iter] = rudi_.uniform(0.0,1.0);
+				}
+			}
+
+			// Fix genotype
+			indi.gen.two &= West73_NotAdjacency[lister.at<uint8_t>(iter)];
+		}
+		else if (indi.gen.thr[lister.at<uint8_t>(iter)]==1)
+		{
+			// Fix particle
+			checker = West73_Adjacency[lister.at<uint8_t>(iter)] & indi.gen.thr;
+			if (checker.any())
+			{
+				for (jter=0; jter<NUMBER_DIMENSIONS; jter++)
+				{
+					if (checker[iter]==1)
+						indi.cc.pos[iter] = rudi_.uniform(0.0,1.0);
+				}
+			}
+
+			// Fix genotype
+			indi.gen.thr &= West73_NotAdjacency[lister.at<uint8_t>(iter)];
+		}
+	}
+
+/*
+	// Fix for repeated harvesting
+	uint64_t temp = rudi_.uniform(1,4);
+	if (temp==1)
+	{
+		indi.gen.two &= ~indi.gen.one;
+		indi.gen.thr &= ~indi.gen.one;
+
+		temp = rudi_.uniform(0,2);
+		if (temp==0)
+			indi.gen.thr &= ~indi.gen.two;
+		else
+			indi.gen.two &= ~indi.gen.thr;
+	}
+	else if (temp==2)
+	{
+		indi.gen.one &= ~indi.gen.two;
+		indi.gen.thr &= ~indi.gen.two;
+
+		temp = rudi_.uniform(0,2);
+		if (temp==0)
+			indi.gen.thr &= ~indi.gen.one;
+		else
+			indi.gen.one &= ~indi.gen.thr;
+	}
+	else if (temp==3)
+	{
+		indi.gen.one &= ~indi.gen.thr;
+		indi.gen.two &= ~indi.gen.thr;
+
+		temp = rudi_.uniform(0,2);
+		if (temp==0)
+			indi.gen.two &= ~indi.gen.one;
+		else
+			indi.gen.one &= ~indi.gen.two;
+	}
+*/
+}
+
+
+
 
 int main(int argc, char* argv[])
 {
@@ -287,8 +432,6 @@ int main(int argc, char* argv[])
 	double inertia_r = 0.1;
 	double cog_r = 0.3;
 	double soc_r  = 0.3;
-//	uint64_t rng_seed = 0xF0F0F0F0;
-//	uint64_t rng_seed = getTickCount();
 	uint64_t num_trials = NUMBER_TRIALS;
 	bool enable_history = false;
 
@@ -305,7 +448,6 @@ int main(int argc, char* argv[])
 			("soc",		po::value<double>(),		"Set Social effect of swarm")
 			("trials",	po::value<uint64_t>(),		"Set Number of Trials")
 			("history",	po::value<bool>(),			"Enable full history")
-//			("rng",		po::value<uint64_t>(),		"Set RNG seed")
 		;
 
 		po::variables_map vm;
@@ -405,22 +547,24 @@ int main(int argc, char* argv[])
 	uint64_t iter;
 	particle_t mini, maxi;
 
-	for (iter=0; iter<NUMBER_GENES; iter++)
+	for (iter=0; iter<NUMBER_DIMENSIONS; iter++)
 	{
-		West73_Adjacency[iter].set();
+		West73_Adjacency[iter].reset();
+		West73_NotAdjacency[iter].set();
 		West73_Yields[iter].Y1 = West73_Yields[iter].y1 * West73_Yields[iter].area;
 		West73_Yields[iter].Y2 = West73_Yields[iter].y2 * West73_Yields[iter].area;
 		West73_Yields[iter].Y3 = West73_Yields[iter].y3 * West73_Yields[iter].area;
 	}
 	for (iter=0; iter<196; iter++)
 	{
-		West73_Adjacency[West73_Adjacency_builder[iter].id-1].reset(West73_Adjacency_builder[iter].ad-1);
+		West73_Adjacency[West73_Adjacency_builder[iter].id-1].set(West73_Adjacency_builder[iter].ad-1);
+		West73_NotAdjacency[West73_Adjacency_builder[iter].id-1].reset(West73_Adjacency_builder[iter].ad-1);
 	}
 
-	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+	for (iter=0; iter<NUMBER_DIMENSIONS; iter++)
 	{
 		mini.pos[iter] = 0.0;
-		maxi.pos[iter] = 1.0;
+		maxi.pos[iter] = 4.0;
 
 		mini.vel[iter] = -4.0;
 		maxi.vel[iter] = 4.0;
@@ -591,7 +735,7 @@ int main(int argc, char* argv[])
 		outfileTheBest << "\n" << NUMBER_GENERATIONS << "," << pop_size << "," << inertia_r << "," << soc_r << "," << cog_r << ",";
 		outfileTheBest << rng_seed << "," << trailer_trash << "," << bestinswarm.calced << "," << aged << ",";
 		outfileTheBest.precision(35);
-		outfileTheBest << bestinswarm.gen.sep.one << "," << bestinswarm.gen.sep.two << "," << bestinswarm.gen.sep.thr << "," << bestinswarm.fit;
+		outfileTheBest << bestinswarm.gen.one << "," << bestinswarm.gen.two << "," << bestinswarm.gen.thr << "," << bestinswarm.fit;
 
 		if (enable_history)
 		{
@@ -601,9 +745,9 @@ int main(int argc, char* argv[])
 
 			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
 			{
-				outfileTheFirst << "," << indiFirst[iter].gen.sep.one << "," << indiFirst[iter].gen.sep.two << "," << indiFirst[iter].gen.sep.thr;
-				outfileTheSecond << "," << indiSecond[iter].gen.sep.one << "," << indiFirst[iter].gen.sep.two << "," << indiFirst[iter].gen.sep.thr;
-				outfileTheThird << "," << indiThird[iter].gen.sep.one << "," << indiFirst[iter].gen.sep.two << "," << indiFirst[iter].gen.sep.thr;
+				outfileTheFirst << "," << indiFirst[iter].gen.one << "," << indiFirst[iter].gen.two << "," << indiFirst[iter].gen.thr;
+				outfileTheSecond << "," << indiSecond[iter].gen.one << "," << indiFirst[iter].gen.two << "," << indiFirst[iter].gen.thr;
+				outfileTheThird << "," << indiThird[iter].gen.one << "," << indiFirst[iter].gen.two << "," << indiFirst[iter].gen.thr;
 			}
 			outfileTheFirst << "\n" << rng_seed << "," << trailer_trash;
 			outfileTheSecond << "\n" << rng_seed << "," << trailer_trash;
