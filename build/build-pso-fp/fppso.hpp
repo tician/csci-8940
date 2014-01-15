@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <vector>
 #include <iterator>
-#include <array>
 
 #include <boost/program_options.hpp>
 
@@ -19,7 +18,7 @@ using namespace std;
 
 
 #define NUMBER_TRIALS				10
-#define NUMBER_GENERATIONS			30000
+#define NUMBER_GENERATIONS			300
 
 #define NUMBER_TRACKING				3
 #define NUMBER_DIMENSIONS			73

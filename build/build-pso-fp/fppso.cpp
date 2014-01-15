@@ -58,6 +58,8 @@ private:
 	specimen_t *pop_;
 	specimen_t *best_;
 
+	bool fixPos_;
+
 	RNG rudi_;
 	uint64_t pop_size_;
 	specimen_t best_in_swarm_;
@@ -75,7 +77,7 @@ private:
 	specimen_t populate(void);
 
 public:
-	population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia);
+	population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia, bool fixPos);
 	~population(void);
 	void populator(void);
 	void iterate(void);
@@ -90,8 +92,9 @@ public:
 	uint64_t Age(void) {return generation_;}
 };
 
-population::population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia)
+population::population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia, bool fixPos)
 {
+	fixPos_ = fixPos;
 	rudi_ = rudi;
 	pop_size_ = pop_size;
 	fitness_calculation_counter_ = 0;
@@ -336,30 +339,35 @@ void population::fixer(specimen_t& indi)
 	{
 		if (indi.gen.one[lister.at<uint8_t>(iter)]==1)
 		{
-			// Fix particle
-			checker = West73_Adjacency[lister.at<uint8_t>(iter)] & indi.gen.one;
-			if (checker.any())
+			if (fixPos_)
 			{
-				for (jter=0; jter<NUMBER_DIMENSIONS; jter++)
+				// Fix particle
+				checker = West73_Adjacency[lister.at<uint8_t>(iter)] & indi.gen.one;
+				if (checker.any())
 				{
-					if (checker[iter]==1)
-						indi.cc.pos[iter] = rudi_.uniform(0.0,1.0);
+					for (jter=0; jter<NUMBER_DIMENSIONS; jter++)
+					{
+						if (checker[iter]==1)
+							indi.cc.pos[iter] = rudi_.uniform(0.0,1.0);
+					}
 				}
 			}
-
 			// Fix genotype
 			indi.gen.one &= West73_NotAdjacency[lister.at<uint8_t>(iter)];
 		}
 		else if (indi.gen.two[lister.at<uint8_t>(iter)]==1)
 		{
-			// Fix particle
-			checker = West73_Adjacency[lister.at<uint8_t>(iter)] & indi.gen.two;
-			if (checker.any())
+			if (fixPos_)
 			{
-				for (jter=0; jter<NUMBER_DIMENSIONS; jter++)
+				// Fix particle
+				checker = West73_Adjacency[lister.at<uint8_t>(iter)] & indi.gen.two;
+				if (checker.any())
 				{
-					if (checker[iter]==1)
-						indi.cc.pos[iter] = rudi_.uniform(0.0,1.0);
+					for (jter=0; jter<NUMBER_DIMENSIONS; jter++)
+					{
+						if (checker[iter]==1)
+							indi.cc.pos[iter] = rudi_.uniform(0.0,1.0);
+					}
 				}
 			}
 
@@ -368,14 +376,17 @@ void population::fixer(specimen_t& indi)
 		}
 		else if (indi.gen.thr[lister.at<uint8_t>(iter)]==1)
 		{
-			// Fix particle
-			checker = West73_Adjacency[lister.at<uint8_t>(iter)] & indi.gen.thr;
-			if (checker.any())
+			if (fixPos_)
 			{
-				for (jter=0; jter<NUMBER_DIMENSIONS; jter++)
+				// Fix particle
+				checker = West73_Adjacency[lister.at<uint8_t>(iter)] & indi.gen.thr;
+				if (checker.any())
 				{
-					if (checker[iter]==1)
-						indi.cc.pos[iter] = rudi_.uniform(0.0,1.0);
+					for (jter=0; jter<NUMBER_DIMENSIONS; jter++)
+					{
+						if (checker[iter]==1)
+							indi.cc.pos[iter] = rudi_.uniform(0.0,1.0);
+					}
 				}
 			}
 
@@ -429,11 +440,12 @@ void population::fixer(specimen_t& indi)
 int main(int argc, char* argv[])
 {
 	uint64_t pop_size = 80;
-	double inertia_r = 0.1;
-	double cog_r = 0.3;
-	double soc_r  = 0.3;
+	double inertia_r = 0.7;
+	double cog_r = 2.0;
+	double soc_r  = 2.0;
 	uint64_t num_trials = NUMBER_TRIALS;
 	bool enable_history = false;
+	bool fixPos = true;
 
 	double last_tick_count = 0.0;
 
@@ -442,12 +454,13 @@ int main(int argc, char* argv[])
 		po::options_description desc("Allowed options");
 		desc.add_options()
 			("help",								"Produce help message")
-			("popsize",	po::value<uint64_t>(),		"Set Population Size")
-			("inertia",	po::value<double>(),		"Set Particle Inertia")
-			("cog",		po::value<double>(),		"Set Cognitive effect of particle")
-			("soc",		po::value<double>(),		"Set Social effect of swarm")
-			("trials",	po::value<uint64_t>(),		"Set Number of Trials")
-			("history",	po::value<bool>(),			"Enable full history")
+			("popsize",			po::value<uint64_t>(),		"Set Population Size")
+			("inertia",			po::value<double>(),		"Set Particle Inertia")
+			("cog",				po::value<double>(),		"Set Cognitive effect of particle")
+			("soc",				po::value<double>(),		"Set Social effect of swarm")
+			("trials",			po::value<uint64_t>(),		"Set Number of Trials")
+			("history",			po::value<bool>(),			"Enable full history")
+			("fix_particle",	po::value<bool>(),			"Disable Particle Position fixing at adjacency conflict")
 		;
 
 		po::variables_map vm;
@@ -520,6 +533,17 @@ int main(int argc, char* argv[])
 		{
 			cout << "History was set to default of " << enable_history << ".\n";
 		}
+
+		if (vm.count("fix_particle"))
+		{
+			fixPos = vm["fix_particle"].as<bool>();
+			cout << "Fix Particle Position at adjacency conflict: " << fixPos << ".\n";
+		}
+		else
+		{
+			cout << "Fix Particle Position at adjacency conflict was set to default of " << fixPos << ".\n";
+		}
+
 /*
 		if (vm.count("rng"))
 		{
@@ -581,7 +605,7 @@ int main(int argc, char* argv[])
 	if (enable_history)
 	{
 		strstr.clear();	strstr.str("");
-		strstr << "./mfd"
+		strstr << "./fp"
 			<< "_" << pop_size
 			<< "_" << NUMBER_GENERATIONS
 			<< "_" << inertia_r
@@ -601,7 +625,7 @@ int main(int argc, char* argv[])
 		}
 
 		strstr.clear();	strstr.str("");
-		strstr << "./mfd"
+		strstr << "./fp"
 			<< "_" << pop_size
 			<< "_" << NUMBER_GENERATIONS
 			<< "_" << inertia_r
@@ -621,7 +645,7 @@ int main(int argc, char* argv[])
 		}
 
 		strstr.clear();	strstr.str("");
-		strstr << "./mfd"
+		strstr << "./fp"
 			<< "_" << pop_size
 			<< "_" << NUMBER_GENERATIONS
 			<< "_" << inertia_r
@@ -646,18 +670,18 @@ int main(int argc, char* argv[])
 	}
 
 	strstr.clear();	strstr.str("");
-	strstr << "./mfd_best"
-		<< "_" << pop_size
-		<< "_" << NUMBER_GENERATIONS
-		<< "_" << inertia_r
-		<< "_" << cog_r
-		<< "_" << soc_r
+	strstr << "./fp_best"
+//		<< "_" << pop_size
+//		<< "_" << NUMBER_GENERATIONS
+//		<< "_" << inertia_r
+//		<< "_" << cog_r
+//		<< "_" << soc_r
 //			<< "_" << trailer_trash			// Current Trial
 //		<< "_" << SymptomSet
 		<< ".csv";
 	outname = strstr.str();
 	ofstream outfileTheBest;
-	outfileTheBest.open( outname.c_str() );
+	outfileTheBest.open( outname.c_str(), std::ofstream::out | std::ofstream::app );
 
 	if ( !outfileTheBest.is_open() )
 	{
@@ -686,7 +710,7 @@ int main(int argc, char* argv[])
 		outfileTheThird << "\n";
 	}
 
-	outfileTheBest << "NumGens,PopSize,Inertia,SOC,COG,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
+	outfileTheBest << "NumGens,PopSize,Inertia,SOC,COG,FixPos,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
 
 	population *hoponpop;
 
@@ -699,7 +723,7 @@ int main(int argc, char* argv[])
 		RNG randi (rng_seed);
 
 	// population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia);
-		hoponpop = new population(randi, pop_size, mini, maxi, cog_r, soc_r, inertia_r);
+		hoponpop = new population(randi, pop_size, mini, maxi, cog_r, soc_r, inertia_r, fixPos);
 
 //		cout << "Trial: " << trailer_trash << endl;
 		if (trailer_trash==0)
@@ -732,7 +756,7 @@ int main(int argc, char* argv[])
 		uint64_t aged = hoponpop->Age();
 //		outfileTheBest << "NumGens,PopSize,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
 		outfileTheBest.precision(best_default_precision);
-		outfileTheBest << "\n" << NUMBER_GENERATIONS << "," << pop_size << "," << inertia_r << "," << soc_r << "," << cog_r << ",";
+		outfileTheBest << "\n" << NUMBER_GENERATIONS << "," << pop_size << "," << inertia_r << "," << soc_r << "," << cog_r << "," << fixPos << ",";
 		outfileTheBest << rng_seed << "," << trailer_trash << "," << bestinswarm.calced << "," << aged << ",";
 		outfileTheBest.precision(35);
 		outfileTheBest << bestinswarm.gen.one << "," << bestinswarm.gen.two << "," << bestinswarm.gen.thr << "," << bestinswarm.fit;
