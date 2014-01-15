@@ -360,17 +360,17 @@ specimen_t population::mutate(specimen_t indi)
 	uint64_t iter;
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
-
-// Causes period two to always be null (retry after
+/*
+// Not great
 		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
 		{
 				indi.gen.one.flip(iter);
 				indi.gen.two.flip(iter);
 				indi.gen.thr.flip(iter);
 		}
-
+*/
 /*
-// Really crap results, but not null
+// Really crap results; never improves after first generation
 		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
 		{
 			uint64_t temp = rudi_.uniform( 1, 4 );
@@ -382,7 +382,7 @@ specimen_t population::mutate(specimen_t indi)
 				indi.gen.thr.flip(iter);
 		}
 */
-/*
+// Works pretty well with randomness of fixer()
 		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
 		{
 			indi.gen.one.flip(iter);
@@ -395,7 +395,6 @@ specimen_t population::mutate(specimen_t indi)
 		{
 			indi.gen.thr.flip(iter);
 		}
-*/
 	}
 	fixer(indi);
 	indi.fit = calcFitness(indi.gen);

@@ -374,11 +374,12 @@ void population::splicer(GENO_TYPE& mama, GENO_TYPE& papa)
 	{
 		if ( (iter >= *it) && (it < loci.end()) )
 		{
-			it++;
+			++it;
 			up ^= up;
 		}
 		mask[iter] = up;
 	}
+//	cout << "\n" << mask;
 
 	ba = ( mask & mama) | (~mask & papa) ;
 	by = (~mask & mama) | ( mask & papa) ;
