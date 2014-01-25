@@ -50,8 +50,8 @@
 			<Add library="/opt/opencv/2.4.4/lib/libopencv_videostab.so" />
 			<Add library="/usr/lib/libboost_program_options.so" />
 		</Linker>
-		<Unit filename="fppso.hpp"/>
 		<Unit filename="fppso.cpp" />
+		<Unit filename="fppso.hpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />
