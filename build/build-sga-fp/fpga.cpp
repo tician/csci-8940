@@ -18,7 +18,7 @@ typedef struct genotype_t
 
 typedef struct specimen_t
 {
-	specimen_t(void) : fit(0.0), calced(0) {};
+	specimen_t(void) : fit(HORRIFIC_FITNESS_VALUE), calced(0) {};
 
 	FITNESS_TYPE	fit;
 	genotype_t		gen;
@@ -32,7 +32,8 @@ bool loci_comp (uint64_t i,uint64_t j)
 }
 bool spec_comp (specimen_t i, specimen_t j)
 {
-	return (i.fit>j.fit);
+//	return (i.fit>j.fit);	// maximize fitness value
+	return (i.fit<j.fit);	// minimize fitness value
 }
 bool spec_uniq (specimen_t i, specimen_t j)
 {
@@ -62,6 +63,7 @@ private:
 	double mu_r_;
 	double xo_r_;
 	uint64_t xo_p_;
+	uint64_t tree_s_;
 	bool elitism_;
 
 	void roulette(void);
@@ -79,7 +81,7 @@ private:
 	void fixer(specimen_t&);
 
 public:
-	population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
+	population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism);
 	~population(void);
 	void populator(void);
 	void breeder(void);
@@ -93,7 +95,7 @@ public:
 	uint64_t Age(void) {return generation_;}
 };
 
-population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism)
+population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism)
 {
 	rudi_ = rudi;
 	pop_size_ = pop_size;
@@ -101,10 +103,12 @@ population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, u
 	mu_r_ = mu_r;
 	xo_r_ = xo_r;
 	xo_p_ = xo_p;
+	tree_s_ = tree_s;
 	elitism_ = elitism;
 
 	pop_ = new specimen_t[pop_size_];
-	sig_fit_ = new FITNESS_TYPE[pop_size_];
+	if (tree_s_==0)
+		sig_fit_ = new FITNESS_TYPE[pop_size_];
 
 	best_ = new specimen_t[NUMBER_TRACKING];
 }
@@ -112,7 +116,8 @@ population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, u
 population::~population(void)
 {
 	delete[] pop_;
-	delete[] sig_fit_;
+	if (tree_s_==0)
+		delete[] sig_fit_;
 	delete[] best_;
 }
 
@@ -139,11 +144,12 @@ void population::bestest(void)
 		best_[jter].gen.one = 0;
 		best_[jter].gen.two = 0;
 		best_[jter].gen.thr = 0;
-		best_[jter++].fit = 0;
+		best_[jter++].fit = HORRIFIC_FITNESS_VALUE;
 	}
 
 
-	if (best_[0].fit > best_ever_.fit)
+//	if (best_[0].fit > best_ever_.fit)	// maximize fitness value
+	if (best_[0].fit < best_ever_.fit)	// minimize fitness value
 	{
 		best_ever_ = best_[0];
 	}
@@ -170,7 +176,8 @@ void population::breeder(void)
 		return;
 
 	genotype_t kiddies[pop_size_];
-	roulette();
+	if (tree_s_==0)
+		roulette();
 
 	uint64_t iter;
 
@@ -211,32 +218,50 @@ void population::breeder(void)
 	bestest();
 }
 
+
 void population::roulette(void)
 {
 	// Roulette Wheel Selection
 	uint64_t iter;
 
-	sig_fit_[0] = pop_[0].fit;
+	sig_fit_[0] = (HORRIFIC_FITNESS_VALUE - pop_[0].fit);
 	for (iter=1; iter<pop_size_; iter++)
 	{
-		sig_fit_[iter] = sig_fit_[iter-1] + pop_[iter].fit;
+		sig_fit_[iter] = sig_fit_[iter-1] + (HORRIFIC_FITNESS_VALUE - pop_[iter].fit);
 	}
 }
 
+
 void population::selector(genotype_t& nana)
 {
-	uint64_t iter;
-	// Roulette Wheel Selection
-	FITNESS_TYPE temp = rudi_.uniform((FITNESS_TYPE) 0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
-
-	for (iter=0; iter<pop_size_; iter++)
+	if (tree_s_ == 0)
 	{
-		if (temp <= sig_fit_[iter])
+		/// Roulette Wheel Selection
+		uint64_t iter;
+		FITNESS_TYPE temp = rudi_.uniform((FITNESS_TYPE) 0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
+
+		for (iter=0; iter<pop_size_; iter++)
 		{
-			nana = pop_[iter].gen;
-			break;
+			if (temp <= sig_fit_[iter])
+			{
+				nana = pop_[iter].gen;
+				break;
+			}
 		}
 	}
+	else
+	{
+		/// Tournament Selection
+		uint64_t iter, indi;
+		FITNESS_TYPE temp = 1.0e12;
+		for (iter=0; iter<tree_s_; iter++)
+		{
+			indi = rudi_.uniform( 0, pop_size_ );
+			if (pop_[indi].fit < temp)
+				nana = pop_[indi].gen;
+		}
+	}
+
 }
 
 void population::splicer(genotype_t& mama, genotype_t& papa)
@@ -308,18 +333,19 @@ void population::mutator(void)
 
 FITNESS_TYPE population::calcFitness(genotype_t genie)
 {
-	FITNESS_TYPE temp = 0;
+	FITNESS_TYPE y1 =0, y2 =0, y3 = 0, temp = 0;
 	uint64_t iter;
 
 	for (iter=0; iter<NUMBER_GENES; iter++)
 	{
 		if (genie.one[iter]==1)
-			temp += West73_Yields[iter].Y1;
+			y1 += West73_Yields[iter].Y1;
 		if (genie.two[iter]==1)
-			temp += West73_Yields[iter].Y2;
+			y2 += West73_Yields[iter].Y2;
 		if (genie.thr[iter]==1)
-			temp += West73_Yields[iter].Y3;
+			y3 += West73_Yields[iter].Y3;
 	}
+	temp = (34467.0-y1)*(34467.0-y1) + (34467.0-y2)*(34467.0-y2) + (34467.0-y3)*(34467.0-y3);
 
 	fitness_calculation_counter_++;
 
@@ -483,6 +509,7 @@ int main(int argc, char* argv[])
 	double mu_r = 0.001;
 	double xo_r = 0.4;
 	uint64_t xo_p = 1;
+	uint64_t tree_s = 0;
 	bool elitism = false;
 	uint64_t num_trials = NUMBER_TRIALS;
 //	uint64_t rng_seed = 0xF0F0F0F0;
@@ -499,6 +526,7 @@ int main(int argc, char* argv[])
 			("mr",		po::value<double>(),		"Set Mutation Rate")
 			("xr",		po::value<double>(),		"Set Crossover Rate")
 			("xp",		po::value<uint64_t>(),		"Set Maximum Number of Crossover Points")
+			("tree",	po::value<uint64_t>(),		"Set Size of Tournament Tree")
 			("el",		po::value<bool>(),			"Enable Elitism")
 			("trials",	po::value<uint64_t>(),		"Set Number of Trials")
 			("history",	po::value<bool>(),			"Enable History")
@@ -554,6 +582,16 @@ int main(int argc, char* argv[])
 		else
 		{
 			cout << "Maximum number of crossover points was set to default of " << xo_p << ".\n";
+		}
+
+		if (vm.count("tree"))
+		{
+			tree_s = vm["tree"].as<uint64_t>();
+			cout << "Tournament tree size was set to " << tree_s << ".\n";
+		}
+		else
+		{
+			cout << "Tournament tree size was set to default of " << tree_s << ".\n";
 		}
 
 		if (vm.count("trials"))
@@ -743,8 +781,7 @@ int main(int argc, char* argv[])
 		outfileTheSecond << "\n";
 		outfileTheThird << "\n";
 	}
-
-	outfileTheBest << "NumGens,PopSize,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
+	outfileTheBest << "NumGens,PopSize,Tree_S,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
 
 	population *hoponpop;
 
@@ -757,8 +794,8 @@ int main(int argc, char* argv[])
 		uint64_t rng_seed = getTickCount();
 		RNG randi (rng_seed);
 
-	// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, bool elitism);
-		hoponpop = new population(randi, pop_size, mu_r, xo_r, xo_p, elitism);
+	// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism);
+		hoponpop = new population(randi, pop_size, mu_r, xo_r, xo_p, tree_s, elitism);
 
 //		cout << "Trial: " << trailer_trash << endl;
 		if (trailer_trash==0)
@@ -791,7 +828,7 @@ int main(int argc, char* argv[])
 		uint64_t aged = hoponpop->Age();
 //		outfileTheBest << "NumGens,PopSize,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
 		outfileTheBest.precision(best_default_precision);
-		outfileTheBest << "\n" << NUMBER_GENERATIONS << "," << pop_size << "," << xo_p << "," << xo_r << "," << mu_r << "," << elitism << ",";
+		outfileTheBest << "\n" << NUMBER_GENERATIONS << "," << pop_size << "," << tree_s << "," << xo_p << "," << xo_r << "," << mu_r << "," << elitism << ",";
 		outfileTheBest << rng_seed << "," << trailer_trash << "," << bestever.calced << "," << aged << ",";
 		outfileTheBest.precision(35);
 		outfileTheBest << bestever.gen.one << "," << bestever.gen.two << "," << bestever.gen.thr << "," << bestever.fit;
