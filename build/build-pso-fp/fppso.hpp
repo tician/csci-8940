@@ -23,6 +23,7 @@ using namespace std;
 #define NUMBER_TRACKING				3
 #define NUMBER_DIMENSIONS			73
 
+#define HORRIFIC_FITNESS_VALUE		1.0e12
 
 #define FITNESS_TYPE				double
 

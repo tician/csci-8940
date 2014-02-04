@@ -27,7 +27,7 @@ typedef struct particle_t
 
 typedef struct specimen_t
 {
-	specimen_t(void) : fit(0.0), calced(0), bf(0.0) {};
+	specimen_t(void) : fit(HORRIFIC_FITNESS_VALUE), calced(0), bf(HORRIFIC_FITNESS_VALUE) {};
 
 	FITNESS_TYPE	fit;		// Current Fitness
 	genotype_t		gen;		// Genotype
@@ -38,7 +38,11 @@ typedef struct specimen_t
 	particle_t		bc;			// Best C?
 };
 
-bool spec_comp (specimen_t i, specimen_t j) { return (i.fit>j.fit); }
+bool spec_comp (specimen_t i, specimen_t j)
+{
+//	return (i.fit>j.fit);	// maximize fitness value
+	return (i.fit<j.fit);	// minimize fitness value
+}
 bool spec_uniq (specimen_t i, specimen_t j)
 {
 	if (i.gen.one != j.gen.one)
@@ -136,11 +140,12 @@ void population::bestest(void)
 	while (jter<NUMBER_TRACKING)
 	{
 		best_[jter].gen.clear();
-		best_[jter++].fit = 0;
+		best_[jter++].fit = HORRIFIC_FITNESS_VALUE;
 	}
 
 
-	if (best_[0].fit > best_in_swarm_.fit)
+//	if (best_[0].fit > best_in_swarm.fit)	// maximize fitness value
+	if (best_[0].fit < best_in_swarm_.fit)	// minimize fitness value
 	{
 		best_in_swarm_ = best_[0];
 	}
@@ -224,18 +229,19 @@ void population::iterate(void)
 
 FITNESS_TYPE population::calcFitness(genotype_t genie)
 {
-	FITNESS_TYPE temp = 0;
+	FITNESS_TYPE y1 = 0, y2 = 0, y3 = 0, temp = 0;
 	uint64_t iter;
 
 	for (iter=0; iter<NUMBER_DIMENSIONS; iter++)
 	{
 		if (genie.one[iter]==1)
-			temp += West73_Yields[iter].Y1;
+			y1 += West73_Yields[iter].Y1;
 		else if (genie.two[iter]==1)
-			temp += West73_Yields[iter].Y2;
+			y2 += West73_Yields[iter].Y2;
 		else if (genie.thr[iter]==1)
-			temp += West73_Yields[iter].Y3;
+			y3 += West73_Yields[iter].Y3;
 	}
+	temp = (34467.0-y1)*(34467.0-y1) + (34467.0-y2)*(34467.0-y2) + (34467.0-y3)*(34467.0-y3);
 
 	fitness_calculation_counter_++;
 
@@ -710,7 +716,7 @@ int main(int argc, char* argv[])
 		outfileTheThird << "\n";
 	}
 
-	outfileTheBest << "NumGens,PopSize,Inertia,SOC,COG,FixPos,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
+	outfileTheBest << "NumGens,PopSize,Inertia,SOC,COG,FixPos,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness,Yield";
 
 	population *hoponpop;
 
@@ -760,6 +766,20 @@ int main(int argc, char* argv[])
 		outfileTheBest << rng_seed << "," << trailer_trash << "," << bestinswarm.calced << "," << aged << ",";
 		outfileTheBest.precision(35);
 		outfileTheBest << bestinswarm.gen.one << "," << bestinswarm.gen.two << "," << bestinswarm.gen.thr << "," << bestinswarm.fit;
+
+		FITNESS_TYPE y1 = 0, y2 = 0, y3 = 0;
+
+		for (iter=0; iter<NUMBER_DIMENSIONS; iter++)
+		{
+			if (bestinswarm.gen.one[iter]==1)
+				y1 += West73_Yields[iter].Y1;
+			if (bestinswarm.gen.two[iter]==1)
+				y2 += West73_Yields[iter].Y2;
+			if (bestinswarm.gen.thr[iter]==1)
+				y3 += West73_Yields[iter].Y3;
+		}
+		outfileTheBest << "," << (y1+y2+y3);
+
 
 		if (enable_history)
 		{

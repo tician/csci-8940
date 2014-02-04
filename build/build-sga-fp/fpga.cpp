@@ -51,6 +51,7 @@ class population
 {
 private:
 	specimen_t *pop_;
+	genotype_t *kiddies_;
 	specimen_t *best_;
 	specimen_t best_ever_;
 
@@ -107,6 +108,7 @@ population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, u
 	elitism_ = elitism;
 
 	pop_ = new specimen_t[pop_size_];
+	kiddies_ = new genotype_t[pop_size_];
 	if (tree_s_==0)
 		sig_fit_ = new FITNESS_TYPE[pop_size_];
 
@@ -116,6 +118,7 @@ population::population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, u
 population::~population(void)
 {
 	delete[] pop_;
+	delete[] kiddies_;
 	if (tree_s_==0)
 		delete[] sig_fit_;
 	delete[] best_;
@@ -175,7 +178,7 @@ void population::breeder(void)
 	if (fitness_calculation_counter_ > (best_ever_.calced + (pop_size_ * 2500)) )
 		return;
 
-	genotype_t kiddies[pop_size_];
+//	genotype_t kiddies[pop_size_];
 	if (tree_s_==0)
 		roulette();
 
@@ -190,11 +193,11 @@ void population::breeder(void)
 			selector(mama);
 			selector(papa);
 			splicer(mama, papa);
-			kiddies[(2*iter)+0] = mama;
-			kiddies[(2*iter)+1] = papa;
+			kiddies_[(2*iter)+0] = mama;
+			kiddies_[(2*iter)+1] = papa;
 		}
-		kiddies[(2*iter)+0] = best_[0].gen;
-		kiddies[(2*iter)+1] = best_[0].gen;
+		kiddies_[(2*iter)+0] = best_[0].gen;
+		kiddies_[(2*iter)+1] = best_[0].gen;
 	}
 	else
 	{
@@ -205,13 +208,13 @@ void population::breeder(void)
 			selector(mama);
 			selector(papa);
 			splicer(mama, papa);
-			kiddies[(2*iter)+0] = mama;
-			kiddies[(2*iter)+1] = papa;
+			kiddies_[(2*iter)+0] = mama;
+			kiddies_[(2*iter)+1] = papa;
 		}
 	}
 	for (iter=0; iter<pop_size_; iter++)
 	{
-		pop_[iter].gen = kiddies[iter];
+		pop_[iter].gen = kiddies_[iter];
 	}
 	mutator();
 	generation_++;
@@ -781,7 +784,7 @@ int main(int argc, char* argv[])
 		outfileTheSecond << "\n";
 		outfileTheThird << "\n";
 	}
-	outfileTheBest << "NumGens,PopSize,Tree_S,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
+	outfileTheBest << "NumGens,PopSize,Tree_S,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness,Yield";
 
 	population *hoponpop;
 
@@ -801,6 +804,7 @@ int main(int argc, char* argv[])
 		if (trailer_trash==0)
 			cout << "Trial: ";
 		cout << trailer_trash << " ";
+		cout.flush();
 
 		hoponpop->populator();
 
@@ -832,6 +836,20 @@ int main(int argc, char* argv[])
 		outfileTheBest << rng_seed << "," << trailer_trash << "," << bestever.calced << "," << aged << ",";
 		outfileTheBest.precision(35);
 		outfileTheBest << bestever.gen.one << "," << bestever.gen.two << "," << bestever.gen.thr << "," << bestever.fit;
+
+		FITNESS_TYPE y1 =0, y2 =0, y3 = 0;
+
+		for (iter=0; iter<NUMBER_GENES; iter++)
+		{
+			if (bestever.gen.one[iter]==1)
+				y1 += West73_Yields[iter].Y1;
+			if (bestever.gen.two[iter]==1)
+				y2 += West73_Yields[iter].Y2;
+			if (bestever.gen.thr[iter]==1)
+				y3 += West73_Yields[iter].Y3;
+		}
+		outfileTheBest << "," << (y1+y2+y3);
+
 
 		if (enable_history)
 		{
