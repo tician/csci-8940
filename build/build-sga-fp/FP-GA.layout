@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <CodeBlocks_layout_file>
 	<ActiveTarget name="Release" />
-	<File name="fpga.cpp" open="1" top="0" tabpos="2">
-		<Cursor position="19320" topLine="831" />
+	<File name="fpga.cpp" open="1" top="1" tabpos="2">
+		<Cursor position="16523" topLine="718" />
 	</File>
 	<File name="fpga.hpp" open="1" top="0" tabpos="1">
-		<Cursor position="474" topLine="6" />
+		<Cursor position="474" topLine="0" />
 	</File>
 </CodeBlocks_layout_file>

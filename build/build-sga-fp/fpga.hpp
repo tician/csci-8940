@@ -23,7 +23,13 @@ using namespace std;
 #define NUMBER_TRACKING				3
 #define NUMBER_GENES				73
 
+//#define MAXIMIZING_FITNESS_VALUE
+
+#ifdef MAXIMIZING_FITNESS_VALUE
+#define HORRIFIC_FITNESS_VALUE		0.0
+#else
 #define HORRIFIC_FITNESS_VALUE		1.0e12
+#endif
 
 #define FITNESS_TYPE				double
 #define GENO_TYPE					bitset<NUMBER_GENES>

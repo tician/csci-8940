@@ -390,6 +390,8 @@ void population::splicer(GENO_TYPE& mama, GENO_TYPE& papa)
 
 	mama = ba;
 	papa = by;
+
+	delete[] locus;
 }
 
 void population::mutator(void)

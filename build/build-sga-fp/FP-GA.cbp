@@ -29,26 +29,29 @@
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="-Wshadow" />
+			<Add option="-Winit-self" />
+			<Add option="-Wredundant-decls" />
+			<Add option="-Wcast-align" />
+			<Add option="-Wundef" />
+			<Add option="-Wfloat-equal" />
+			<Add option="-Winline" />
+			<Add option="-Wunreachable-code" />
+			<Add option="-Wmissing-declarations" />
+			<Add option="-Wmissing-include-dirs" />
+			<Add option="-Wswitch-enum" />
+			<Add option="-Wswitch-default" />
+			<Add option="-Wmain" />
+			<Add option="-pedantic-errors" />
+			<Add option="-pedantic" />
+			<Add option="-Wextra" />
 			<Add option="-Wall" />
-			<Add directory="/opt/opencv/2.4.4/include" />
 			<Add directory="/usr/include/boost" />
+			<Add directory="/usr/include/opencv2" />
 		</Compiler>
 		<Linker>
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_calib3d.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_contrib.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_core.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_features2d.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_flann.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_highgui.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_imgproc.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_legacy.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_ml.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_objdetect.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_photo.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_ts.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_video.so" />
-			<Add library="/opt/opencv/2.4.4/lib/libopencv_videostab.so" />
 			<Add library="/usr/lib/libboost_program_options.so" />
+			<Add library="/usr/lib/libopencv_core.so" />
 		</Linker>
 		<Unit filename="fpga.cpp" />
 		<Unit filename="fpga.hpp" />
