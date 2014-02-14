@@ -20,6 +20,11 @@ typedef struct specimen_t
 } specimen_t;
 
 
+bool loci_comp (uint64_t,uint64_t);
+bool spec_comp (specimen_t, specimen_t);
+bool spec_uniq (specimen_t, specimen_t);
+
+
 bool loci_comp (uint64_t i,uint64_t j)
 {
 	return (i<=j);
@@ -541,6 +546,8 @@ int main(int argc, char* argv[])
 	bool elitism = false;
 	uint64_t num_trials = NUMBER_TRIALS;
 
+	string	out_filename = "./sga_fp_best.csv";
+
 	double last_tick_count = 0.0;
 
     try
@@ -555,6 +562,7 @@ int main(int argc, char* argv[])
 			("tree",	po::value<uint64_t>(),		"Set Size of Tournament Tree")
 			("el",		po::value<bool>(),			"Enable Elitism")
 			("trials",	po::value<uint64_t>(),		"Set Number of Trials")
+			("out",		po::value<string>(),		"Set output filename")
 		;
 
 		po::variables_map vm;
@@ -637,6 +645,16 @@ int main(int argc, char* argv[])
 		{
 			cout << "Elitism was set to default of " << elitism << ".\n";
 		}
+
+		if (vm.count("out"))
+		{
+			out_filename = vm["out"].as<string>();
+			cout << "Output filename was set to: " << out_filename << ".\n";
+		}
+		else
+		{
+			cout << "Output filename was set to default of: " << out_filename << ".\n";
+		}
 	}
 	catch(std::exception& e)
 	{
@@ -667,18 +685,18 @@ int main(int argc, char* argv[])
 
 
 	// Print data to file
-	stringstream strstr (stringstream::in | stringstream::out);
-	string outname;
+//	stringstream strstr (stringstream::in | stringstream::out);
+//	string outname;
 
-	strstr.clear();	strstr.str("");
-	strstr << "./sga_fp_best" << ".csv";
-	outname = strstr.str();
+//	strstr.clear();	strstr.str("");
+//	strstr << "./sga_fp_best" << ".csv";
+//	outname = strstr.str();
 	ofstream outfileTheBest;
-	outfileTheBest.open( outname.c_str(), std::ofstream::out | std::ofstream::app );
+	outfileTheBest.open( out_filename.c_str(), std::ofstream::out | std::ofstream::app );
 
 	if ( !outfileTheBest.is_open() )
 	{
-		cerr << "Unable to open file: " << outname << "\n";
+		cerr << "Unable to open file: " << out_filename << "\n";
 		return 1;
 	}
 
