@@ -453,13 +453,15 @@ int main(int argc, char* argv[])
 	bool enable_history = false;
 	bool fixPos = true;
 
+	string	out_filename = "./pso_fp_best.csv";
+
 	double last_tick_count = 0.0;
 
     try
     {
 		po::options_description desc("Allowed options");
 		desc.add_options()
-			("help",								"Produce help message")
+			("help",										"Produce help message")
 			("popsize",			po::value<uint64_t>(),		"Set Population Size")
 			("inertia",			po::value<double>(),		"Set Particle Inertia")
 			("cog",				po::value<double>(),		"Set Cognitive effect of particle")
@@ -467,6 +469,7 @@ int main(int argc, char* argv[])
 			("trials",			po::value<uint64_t>(),		"Set Number of Trials")
 			("history",			po::value<bool>(),			"Enable full history")
 			("fix_particle",	po::value<bool>(),			"Disable Particle Position fixing at adjacency conflict")
+			("out",				po::value<string>(),		"Set output filename")
 		;
 
 		po::variables_map vm;
@@ -548,6 +551,16 @@ int main(int argc, char* argv[])
 		else
 		{
 			cout << "Fix Particle Position at adjacency conflict was set to default of " << fixPos << ".\n";
+		}
+
+		if (vm.count("out"))
+		{
+			out_filename = vm["out"].as<string>();
+			cout << "Output filename was set to: " << out_filename << ".\n";
+		}
+		else
+		{
+			cout << "Output filename was set to default of: " << out_filename << ".\n";
 		}
 
 /*
@@ -675,23 +688,13 @@ int main(int argc, char* argv[])
 		outfileTheThird.precision(35);
 	}
 
-	strstr.clear();	strstr.str("");
-	strstr << "./fp_best"
-//		<< "_" << pop_size
-//		<< "_" << NUMBER_GENERATIONS
-//		<< "_" << inertia_r
-//		<< "_" << cog_r
-//		<< "_" << soc_r
-//			<< "_" << trailer_trash			// Current Trial
-//		<< "_" << SymptomSet
-		<< ".csv";
-	outname = strstr.str();
+
 	ofstream outfileTheBest;
-	outfileTheBest.open( outname.c_str(), std::ofstream::out | std::ofstream::app );
+	outfileTheBest.open( out_filename.c_str(), std::ofstream::out | std::ofstream::app );
 
 	if ( !outfileTheBest.is_open() )
 	{
-		cerr << "Unable to open file: " << outname << "\n";
+		cerr << "Unable to open file: " << out_filename << "\n";
 		return 1;
 	}
 
