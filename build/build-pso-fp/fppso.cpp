@@ -60,13 +60,12 @@ class population
 {
 private:
 	specimen_t *pop_;
-	specimen_t *best_;
+	specimen_t best_in_swarm_;
 
 	bool fixPos_;
 
 	RNG rudi_;
 	uint64_t pop_size_;
-	specimen_t best_in_swarm_;
 	uint64_t fitness_calculation_counter_;
 
 	particle_t min_, max_;
@@ -87,10 +86,6 @@ public:
 	void iterate(void);
 	void fixer(specimen_t&);
 
-	specimen_t First (void){return best_[0];}
-	specimen_t Second(void){return best_[1];}
-	specimen_t Third (void){return best_[2];}
-
 	specimen_t BestInSwarm(void){return best_in_swarm_;}
 
 	uint64_t Age(void) {return generation_;}
@@ -110,46 +105,26 @@ population::population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particl
 	inertia_ = inertia;
 
 	pop_ = new specimen_t[pop_size_];
-	best_ = new specimen_t[NUMBER_TRACKING];
 }
 
 population::~population(void)
 {
 	delete[] pop_;
-	delete[] best_;
 }
 
 void population::bestest(void)
 {
-	std::vector<specimen_t> punk (pop_, pop_+pop_size_);
-	std::sort (punk.begin(), punk.end(), spec_comp);
+	uint64_t iter;
 
-
-	std::vector<specimen_t>::iterator viter;
-	viter = std::unique(punk.begin(), punk.end(), spec_uniq);
-	punk.resize( std::distance(punk.begin(),viter) );
-
-	viter = punk.begin();
-
-	uint64_t jter=0;
-	while( (viter<punk.end()) && (jter<NUMBER_TRACKING) )
+	for (iter=0; iter<pop_size_; iter++)
 	{
-		best_[jter] = (*viter);
-		jter++; viter++;
-	}
-	while (jter<NUMBER_TRACKING)
-	{
-		best_[jter].gen.clear();
-		best_[jter++].fit = HORRIFIC_FITNESS_VALUE;
-	}
 
-
-//	if (best_[0].fit > best_in_swarm.fit)	// maximize fitness value
-	if (best_[0].fit < best_in_swarm_.fit)	// minimize fitness value
-	{
-		best_in_swarm_ = best_[0];
+	//	if (best_[0].fit > best_in_swarm.fit)	// maximize fitness value
+		if (pop_[iter].fit < best_in_swarm_.fit)	// minimize fitness value
+		{
+			best_in_swarm_ = pop_[iter];
+		}
 	}
-
 }
 
 void population::populator(void)
@@ -167,8 +142,8 @@ void population::populator(void)
 
 void population::iterate(void)
 {
-	// Check for lack of improvement in best particle (over 25 iterations, then stop processing)
-	if (fitness_calculation_counter_ > (best_in_swarm_.calced + (pop_size_ * 25)) )
+	// Check for lack of improvement in best particle (over GENERATION_LIMIT iterations, then stop processing)
+	if (fitness_calculation_counter_ > (best_in_swarm_.calced + (pop_size_ * GENERATION_LIMIT)) )
 		return;
 
 	uint64_t iter, jter;
@@ -616,77 +591,6 @@ int main(int argc, char* argv[])
 
 	// Print data to file
 	stringstream strstr (stringstream::in | stringstream::out);
-	ofstream outfileTheFirst;
-	ofstream outfileTheSecond;
-	ofstream outfileTheThird;
-	string outname;
-
-	if (enable_history)
-	{
-		strstr.clear();	strstr.str("");
-		strstr << "./fp"
-			<< "_" << pop_size
-			<< "_" << NUMBER_GENERATIONS
-			<< "_" << inertia_r
-			<< "_" << cog_r
-			<< "_" << soc_r
-	//			<< "_" << trailer_trash			// Current Trial
-	//		<< "_" << SymptomSet
-			<< "_" << "first"
-			<< ".csv";
-		outname = strstr.str();
-		outfileTheFirst.open( outname.c_str() );
-
-		if ( !outfileTheFirst.is_open() )
-		{
-			cerr << "Unable to open file: " << outname << "\n";
-			return 1;
-		}
-
-		strstr.clear();	strstr.str("");
-		strstr << "./fp"
-			<< "_" << pop_size
-			<< "_" << NUMBER_GENERATIONS
-			<< "_" << inertia_r
-			<< "_" << cog_r
-			<< "_" << soc_r
-	//			<< "_" << trailer_trash			// Current Trial
-	//		<< "_" << SymptomSet
-			<< "_" << "second"
-			<< ".csv";
-		outname = strstr.str();
-		outfileTheSecond.open( outname.c_str() );
-
-		if ( !outfileTheSecond.is_open() )
-		{
-			cerr << "Unable to open file: " << outname << "\n";
-			return 1;
-		}
-
-		strstr.clear();	strstr.str("");
-		strstr << "./fp"
-			<< "_" << pop_size
-			<< "_" << NUMBER_GENERATIONS
-			<< "_" << inertia_r
-			<< "_" << cog_r
-			<< "_" << soc_r
-	//			<< "_" << trailer_trash			// Current Trial
-	//		<< "_" << SymptomSet
-			<< "_" << "third"
-			<< ".csv";
-		outname = strstr.str();
-		outfileTheThird.open( outname.c_str() );
-
-		if ( !outfileTheThird.is_open() )
-		{
-			cerr << "Unable to open file: " << outname << "\n";
-			return 1;
-		}
-
-		outfileTheFirst.precision(35);
-		outfileTheSecond.precision(35);
-		outfileTheThird.precision(35);
-	}
 
 
 	ofstream outfileTheBest;
@@ -701,25 +605,7 @@ int main(int argc, char* argv[])
 //	outfileTheBest.precision(35);
 	uint64_t best_default_precision = outfileTheBest.precision();
 
-	if (enable_history)
-	{
-		outfileTheFirst << "RNG_Seed,Trial";
-		outfileTheSecond << "RNG_Seed,Trial";
-		outfileTheThird << "RNG_Seed,Trial";
-
-		for (iter=0; iter<NUMBER_GENERATIONS; iter++)
-		{
-			outfileTheFirst << ",Ga" << iter << ",Gb" << iter << ",Gc" << iter;
-			outfileTheSecond << ",Ga" << iter << ",Gb" << iter << ",Gc" << iter;
-			outfileTheThird << ",Ga" << iter << ",Gb" << iter << ",Gc" << iter;
-		}
-
-		outfileTheFirst << "\n";
-		outfileTheSecond << "\n";
-		outfileTheThird << "\n";
-	}
-
-	outfileTheBest << "NumGens,PopSize,Inertia,SOC,COG,FixPos,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness,Yield";
+	outfileTheBest << "\nNumGens,PopSize,Inertia,SOC,COG,FixPos,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness,Yield";
 
 	population *hoponpop;
 
@@ -738,12 +624,9 @@ int main(int argc, char* argv[])
 		if (trailer_trash==0)
 			cout << "Trial: ";
 		cout << trailer_trash << " ";
+		cout.flush();
 
 		hoponpop->populator();
-
-		specimen_t indiFirst [NUMBER_GENERATIONS];
-		specimen_t indiSecond[NUMBER_GENERATIONS];
-		specimen_t indiThird [NUMBER_GENERATIONS];
 
 		uint64_t generational_recursion;
 		for (generational_recursion=0; generational_recursion<NUMBER_GENERATIONS; generational_recursion++)
@@ -752,13 +635,6 @@ int main(int argc, char* argv[])
 //				hoponpop.iterate();
 			hoponpop->iterate();
 //				cout << "Generation over\n";
-
-			if (enable_history)
-			{
-				indiFirst[generational_recursion] = hoponpop->First ();
-				indiSecond[generational_recursion] = hoponpop->Second();
-				indiThird[generational_recursion] = hoponpop->Third ();
-			}
 		}
 
 		specimen_t bestinswarm = hoponpop->BestInSwarm();
@@ -782,61 +658,17 @@ int main(int argc, char* argv[])
 				y3 += West73_Yields[iter].Y3;
 		}
 		outfileTheBest << "," << (y1+y2+y3);
-
-
-		if (enable_history)
-		{
-			outfileTheFirst << rng_seed << "," << trailer_trash;
-			outfileTheSecond << rng_seed << ","<< trailer_trash;
-			outfileTheThird << rng_seed << "," << trailer_trash;
-
-			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
-			{
-				outfileTheFirst << "," << indiFirst[iter].gen.one << "," << indiFirst[iter].gen.two << "," << indiFirst[iter].gen.thr;
-				outfileTheSecond << "," << indiSecond[iter].gen.one << "," << indiFirst[iter].gen.two << "," << indiFirst[iter].gen.thr;
-				outfileTheThird << "," << indiThird[iter].gen.one << "," << indiFirst[iter].gen.two << "," << indiFirst[iter].gen.thr;
-			}
-			outfileTheFirst << "\n" << rng_seed << "," << trailer_trash;
-			outfileTheSecond << "\n" << rng_seed << "," << trailer_trash;
-			outfileTheThird << "\n" << rng_seed << "," << trailer_trash;
-
-			for (iter=0; iter<NUMBER_GENERATIONS; iter++)
-			{
-				outfileTheFirst << "," << indiFirst[iter].fit;
-				outfileTheSecond << "," << indiSecond[iter].fit;
-				outfileTheThird << "," << indiThird[iter].fit;
-			}
-			outfileTheFirst << "\n";
-			outfileTheSecond << "\n";
-			outfileTheThird << "\n";
-		}
+		outfileTheBest.flush();
 
 		delete hoponpop;
 	}//End of Trial
 	cout << endl;
-
-	if (enable_history)
-	{
-		outfileTheFirst << "\n";
-		outfileTheSecond << "\n";
-		outfileTheThird << "\n";
-
-		outfileTheFirst.flush();
-		outfileTheSecond.flush();
-		outfileTheThird.flush();
-	}
 
 	outfileTheBest << "\n";
 	outfileTheBest.flush();
 
 	cout << "\tProcessing time: " << ((double) getTickCount() - last_tick_count)/getTickFrequency() << "[s]\n";
 
-	if (enable_history)
-	{
-		outfileTheFirst.close();
-		outfileTheSecond.close();
-		outfileTheThird.close();
-	}
 	outfileTheBest.close();
 
 	return 0;

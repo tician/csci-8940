@@ -18,7 +18,8 @@ using namespace std;
 
 
 #define NUMBER_TRIALS				10
-#define NUMBER_GENERATIONS			300
+#define NUMBER_GENERATIONS			3000
+#define GENERATION_LIMIT			50
 
 #define NUMBER_TRACKING				3
 #define NUMBER_DIMENSIONS			73
