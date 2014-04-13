@@ -1,0 +1,19 @@
+Population size was set to 200.
+Mutation rate was set to 0.001.
+Crossover rate was set to 0.5.
+Maximum number of crossover points was set to default of 1.
+Tournament tree size was set to 0.
+Number of Trials was set to default of 10.
+Elitism was set to 0.
+Output filename was set to: sga_fp_mac0_proc1.csv.
+Trial: 0 1 2 3 4 5 6 7 8 9 
+	Processing time: 140.41[s]
+Population size was set to 200.
+Mutation rate was set to 0.001.
+Crossover rate was set to 0.5.
+Maximum number of crossover points was set to default of 1.
+Tournament tree size was set to 0.
+Number of Trials was set to default of 10.
+Elitism was set to 1.
+Output filename was set to: sga_fp_mac0_proc1.csv.
+Trial: 0 1 
