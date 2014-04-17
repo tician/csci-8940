@@ -1,7 +1,7 @@
 
 #include "msega.hpp"
 
-typedef boost::random::mt19937 RNG;
+typedef boost::mt19937 RNG_t;
 
 typedef struct genotype_t
 {
@@ -20,15 +20,9 @@ typedef struct specimen_t
 } specimen_t;
 
 
-bool loci_comp (uint64_t,uint64_t);
 bool spec_comp (specimen_t, specimen_t);
 bool spec_uniq (specimen_t, specimen_t);
 
-
-bool loci_comp (uint64_t i,uint64_t j)
-{
-	return (i<=j);
-}
 bool spec_comp (specimen_t i, specimen_t j)
 {
 #ifdef MAXIMIZING_FITNESS_VALUE
@@ -68,14 +62,14 @@ private:
 
 	uint64_t fitness_calculation_counter_;
 
-	RNG *rudi_;
-	boost::random::uniform_int<> dist_nc(1, 42);		// must have at least 1
-	boost::random::uniform_int<> dist_len(1, 9);
-	boost::random::uniform_int<> dist_sen1(1, 168);
-	boost::random::uniform_int<> dist_sen2(1, 56);
-	boost::random::uniform_int<> dist_scc(1, 7);		// must have at least 1
-	boost::random::uniform_int<> dist_rau(1, 92);
-	boost::random::uniform_int<> dist_nai(1, 4);
+	RNG_t *rudi_;
+	boost::uniform_int<> dist_nc;//(1, 42);		// must have at least 1
+	boost::uniform_int<> dist_len;//(1, 9);
+	boost::uniform_int<> dist_sen1;//(1, 168);
+	boost::uniform_int<> dist_sen2;//(1, 56);
+	boost::uniform_int<> dist_scc;//(1, 7);		// must have at least 1
+	boost::uniform_int<> dist_rau;//(1, 92);
+	boost::uniform_int<> dist_nai;//(1, 4);
 
 	uint64_t pop_size_;
 	double mu_r_;
@@ -103,7 +97,7 @@ private:
 	void fixer(specimen_t&);
 
 public:
-	population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt);
+	population(RNG_t *rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt);
 	~population(void);
 	void populator(void);
 	void breeder(void);
@@ -113,8 +107,16 @@ public:
 	uint64_t Age(void) {return generation_;}
 };
 
-population::population(RNG *rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt)
+population::population(RNG_t *rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt)
+: dist_nc(1, 42)
+, dist_len(1, 9)
+, dist_sen1(1, 168)
+, dist_sen2(1, 56)
+, dist_scc(1, 7)
+, dist_rau(1, 92)
+, dist_nai(1, 4)
 {
+
 	rudi_ = rudi;
 	pop_size_ = pop_size;
 	fitness_calculation_counter_ = 0;
@@ -302,7 +304,7 @@ void population::selector(genotype_t& nana)
 		/// Roulette Wheel Selection
 		uint64_t iter;
 //		FITNESS_TYPE temp = rudi_.uniform((FITNESS_TYPE) 0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
-		boost::random::uniform_real<> dist_roulette((FITNESS_TYPE) 0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
+		boost::uniform_real<> dist_roulette((FITNESS_TYPE) 0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
 		FITNESS_TYPE temp = dist_roulette(*rudi_);
 
 		for (iter=0; iter<pop_size_; iter++)
@@ -319,7 +321,7 @@ void population::selector(genotype_t& nana)
 		/// Tournament Selection
 		uint64_t iter, indi;
 		FITNESS_TYPE temp = HORRIFIC_FITNESS_VALUE;
-		boost::random::uniform_int_distribution<> dist_tournament(0, pop_size_-1);
+		boost::uniform_int<> dist_tournament(0, pop_size_-1);
 		for (iter=0; iter<tree_s_; iter++)
 		{
 //			indi = rudi_.uniform( 0, pop_size_ );
@@ -340,9 +342,10 @@ void population::splicer(genotype_t& mama, genotype_t& papa)
 
 	genotype_t ba = mama, by = papa;
 
-	boost::random::uniform_real dist_xovr(0,(1/xo_r_));
-	boost::random::uniform_int dist_loci(0,NUMBER_GENES-1);
+	boost::uniform_real<> dist_xovr(0,(1/xo_r_));
+	boost::uniform_int<> dist_loci(0,NUMBER_GENES-1);
 
+	uint64_t iter;
 	for (iter=0; iter<xo_p_; iter++)
 	{
 //		if (rudi_.uniform( 0, (int)(1/xo_r_)) < 1)
@@ -403,7 +406,7 @@ void population::mutator(void)
 
 specimen_t population::mutate(specimen_t indi)
 {
-	boost::random::uniform_real<> dist_mutate(0, (1/mu_r_));
+	boost::uniform_real<> dist_mutate(0, (1/mu_r_));
 	if ( dist_mutate(*rudi_) < 1)
 	{
 		indi.gen.nc = dist_nc(*rudi_);
@@ -430,7 +433,7 @@ specimen_t population::mutate(specimen_t indi)
 	}
 	if ( dist_mutate(*rudi_) < 1)
 	{
-		indi.gen.nai = dist_nai(*rudi);
+		indi.gen.nai = dist_nai(*rudi_);
 	}
 
 
@@ -537,10 +540,14 @@ int main(int argc, char* argv[])
 	uint64_t num_trials = NUMBER_TRIALS;
 	uint64_t num_gens = NUMBER_GENERATIONS;
 	uint64_t gen_limit = NUMBER_GENERATIONS/10;
+	uint64_t msrt = 100;
+	uint64_t dnvt = 100;
 
-	string	out_filename = "./mse_fp_best.csv";
+	string	out_filename = "";
 
 	double last_tick_count = 0.0;
+
+	stringstream strstr (stringstream::in | stringstream::out);
 
     try
     {
@@ -555,6 +562,8 @@ int main(int argc, char* argv[])
 			("el",		po::value<bool>(),			"Enable Elitism")
 			("trials",	po::value<uint64_t>(),		"Set Number of Trials")
 			("gens",	po::value<uint64_t>(),		"Set Number of Generations")
+			("msrt",	po::value<uint64_t>(),		"Set Number of MSRT")
+			("dnvt",	po::value<uint64_t>(),		"Set Number of DNVT")
 			("out",		po::value<string>(),		"Set output filename")
 		;
 
@@ -642,6 +651,26 @@ int main(int argc, char* argv[])
 			cout << "Number of Generations was set to default of " << num_gens << ".\n";
 		}
 
+		if (vm.count("msrt"))
+		{
+			msrt = vm["msrt"].as<uint64_t>();
+			cout << "Number of MSRT was set to " << msrt << ".\n";
+		}
+		else
+		{
+			cout << "Number of MSRT was set to default of " << msrt << ".\n";
+		}
+
+		if (vm.count("dnvt"))
+		{
+			dnvt = vm["dnvt"].as<uint64_t>();
+			cout << "Number of DNVT was set to " << dnvt << ".\n";
+		}
+		else
+		{
+			cout << "Number of DNVT was set to default of " << dnvt << ".\n";
+		}
+
 		if (vm.count("el"))
 		{
 			elitism = vm["el"].as<bool>();
@@ -673,14 +702,14 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	if (out_filename.length() < 4)
+	{
+		strstr.clear();	strstr.str("");
+		strstr << "./sga_mse_" << msrt << "_" << dnvt << ".csv";
+		out_filename = strstr.str();
+	}
 
 	// Print data to file
-//	stringstream strstr (stringstream::in | stringstream::out);
-//	string outname;
-
-//	strstr.clear();	strstr.str("");
-//	strstr << "./sga_fp_best" << ".csv";
-//	outname = strstr.str();
 	ofstream outfileTheBest;
 	outfileTheBest.open( out_filename.c_str(), std::ofstream::out | std::ofstream::app );
 
@@ -698,15 +727,18 @@ int main(int argc, char* argv[])
 	population *hoponpop;
 
 
-	last_tick_count = (double) getTickCount();
+//	last_tick_count = (double) getTickCount();
+	last_tick_count = (double) std::time(0);
 
 	uint64_t trailer_trash;
 	for (trailer_trash=0; trailer_trash<num_trials; trailer_trash++)
 	{
-		uint64_t rng_seed = getTickCount();
-		RNG randi (rng_seed);
+//		uint64_t rng_seed = getTickCount();
+		uint64_t rng_seed = std::time(0);
 
-	// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt);
+		RNG_t randi (rng_seed);
+
+	// population(RNG_t& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt);
 		hoponpop = new population(&randi, pop_size, mu_r, xo_r, xo_p, tree_s, elitism, gen_limit, msrt, dnvt);
 
 //		cout << "Trial: " << trailer_trash << endl;
@@ -735,7 +767,7 @@ int main(int argc, char* argv[])
 		outfileTheBest << bestever.gen.nc << "," << bestever.gen.len << "," << bestever.gen.sen1 << "," << bestever.gen.sen2 << ",";
 		outfileTheBest << bestever.gen.scc << "," << bestever.gen.rau << "," << bestever.gen.nai << ",";
 //		outfileTheBest.precision(16);
-		outfileTheBest << bestever.fit
+		outfileTheBest << bestever.fit;
 
 		outfileTheBest.flush();
 
@@ -746,7 +778,8 @@ int main(int argc, char* argv[])
 	outfileTheBest << "\n";
 	outfileTheBest.flush();
 
-	cout << "\tProcessing time: " << ((double) getTickCount() - last_tick_count)/getTickFrequency() << "[s]\n";
+//	cout << "\tProcessing time: " << ((double) getTickCount() - last_tick_count)/getTickFrequency() << "[s]\n";
+	cout << "\tProcessing time: " << ((double) std::time(0) - last_tick_count) << "[s]\n";
 
 	outfileTheBest.close();
 

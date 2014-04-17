@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 //#include <bitset>
+#include <ctime>
 
 #include <algorithm>
 #include <vector>
