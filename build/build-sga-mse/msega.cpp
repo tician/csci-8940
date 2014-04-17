@@ -62,7 +62,6 @@ class population
 private:
 	specimen_t *pop_;
 	genotype_t *kiddies_;
-	specimen_t *best_;
 	specimen_t best_ever_;
 
 	FITNESS_TYPE *sig_fit_;
@@ -70,13 +69,13 @@ private:
 	uint64_t fitness_calculation_counter_;
 
 	RNG *rudi_;
-	boost::random::uniform_int_distribution<> dist_nc(1, );
-	boost::random::uniform_int_distribution<> dist_len(1, );
-	boost::random::uniform_int_distribution<> dist_sen1(1, );
-	boost::random::uniform_int_distribution<> dist_sen2(1, );
-	boost::random::uniform_int_distribution<> dist_scc(1, );
-	boost::random::uniform_int_distribution<> dist_rau(1, );
-	boost::random::uniform_int_distribution<> dist_nai(1, );
+	boost::random::uniform_int<> dist_nc(1, 42);		// must have at least 1
+	boost::random::uniform_int<> dist_len(1, 9);
+	boost::random::uniform_int<> dist_sen1(1, 168);
+	boost::random::uniform_int<> dist_sen2(1, 56);
+	boost::random::uniform_int<> dist_scc(1, 7);		// must have at least 1
+	boost::random::uniform_int<> dist_rau(1, 92);
+	boost::random::uniform_int<> dist_nai(1, 4);
 
 	uint64_t pop_size_;
 	double mu_r_;
@@ -84,6 +83,7 @@ private:
 	uint64_t xo_p_;
 	uint64_t tree_s_;
 	bool elitism_;
+	uint64_t gen_limit_;
 
 	uint64_t msrt_;
 	uint64_t dnvt_;
@@ -103,21 +103,17 @@ private:
 	void fixer(specimen_t&);
 
 public:
-	population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t msrt, uint64_t dnvt);
+	population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt);
 	~population(void);
 	void populator(void);
 	void breeder(void);
-
-	specimen_t First (void){return best_[0];}
-	specimen_t Second(void){return best_[1];}
-	specimen_t Third (void){return best_[2];}
 
 	specimen_t BestEver(void){return best_ever_;}
 
 	uint64_t Age(void) {return generation_;}
 };
 
-population::population(RNG *rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t msrt, uint64_t dnvt)
+population::population(RNG *rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt)
 {
 	rudi_ = rudi;
 	pop_size_ = pop_size;
@@ -127,6 +123,7 @@ population::population(RNG *rudi, uint64_t pop_size, double mu_r, double xo_r, u
 	xo_p_ = xo_p;
 	tree_s_ = tree_s;
 	elitism_ = elitism;
+	gen_limit_ = gen_limit;
 
 	msrt_ = msrt;
 	dnvt_ = dnvt;
@@ -136,7 +133,6 @@ population::population(RNG *rudi, uint64_t pop_size, double mu_r, double xo_r, u
 	if (tree_s_==0)
 		sig_fit_ = new FITNESS_TYPE[pop_size_];
 
-	best_ = new specimen_t[NUMBER_TRACKING];
 }
 
 population::~population(void)
@@ -145,7 +141,6 @@ population::~population(void)
 	delete[] kiddies_;
 	if (tree_s_==0)
 		delete[] sig_fit_;
-	delete[] best_;
 }
 
 void population::bestest(void)
@@ -212,19 +207,36 @@ void population::populator(void)
 	bestest();
 }
 
+specimen_t population::populate(void)
+{
+	specimen_t indi;
+
+	indi.gen.nc = dist_nc(*rudi_);
+	indi.gen.len = dist_len(*rudi_);
+	indi.gen.sen1 = dist_sen1(*rudi_);
+	indi.gen.sen2 = dist_sen2(*rudi_);
+	indi.gen.scc = dist_scc(*rudi_);
+	indi.gen.rau = dist_rau(*rudi_);
+	indi.gen.nai = dist_nai(*rudi_);
+
+//	fixer(indi);
+	indi.fit = calcFitness(indi.gen);
+	indi.calced = fitness_calculation_counter_;
+	return indi;
+}
+
 void population::breeder(void)
 {
 	// Check for lack of improvement in best individual (over 25 generations without improvement, then stop processing)
-	if (fitness_calculation_counter_ > (best_ever_.calced + (pop_size_ * 2500)) )
+	if (fitness_calculation_counter_ > (best_ever_.calced + (pop_size_ * gen_limit_)) )
 		return;
 
-//	genotype_t kiddies[pop_size_];
 	if (tree_s_==0)
 		roulette();
 
 	uint64_t iter;
 
-	if (elitism_)// && (generation_>0))
+	if (elitism_)
 	{
 		for (iter=0; iter<(pop_size_/2)-2; iter++)
 		{
@@ -236,8 +248,6 @@ void population::breeder(void)
 			kiddies_[(2*iter)+0] = mama;
 			kiddies_[(2*iter)+1] = papa;
 		}
-//		kiddies_[(2*iter)+0] = best_[0].gen;
-//		kiddies_[(2*iter)+1] = best_[0].gen;
 		kiddies_[(2*iter)+0] = best_ever_.gen;
 		kiddies_[(2*iter)+1] = best_ever_.gen;
 	}
@@ -269,11 +279,19 @@ void population::roulette(void)
 	// Roulette Wheel Selection
 	uint64_t iter;
 
+#ifdef MAXIMIZING_FITNESS_VALUE
+	sig_fit_[0] = pop_[0].fit;
+	for (iter=1; iter<pop_size_; iter++)
+	{
+		sig_fit_[iter] = sig_fit_[iter-1] + pop_[iter].fit;
+	}
+#else
 	sig_fit_[0] = (HORRIFIC_FITNESS_VALUE - pop_[0].fit);
 	for (iter=1; iter<pop_size_; iter++)
 	{
 		sig_fit_[iter] = sig_fit_[iter-1] + (HORRIFIC_FITNESS_VALUE - pop_[iter].fit);
 	}
+#endif
 }
 
 
@@ -284,7 +302,8 @@ void population::selector(genotype_t& nana)
 		/// Roulette Wheel Selection
 		uint64_t iter;
 //		FITNESS_TYPE temp = rudi_.uniform((FITNESS_TYPE) 0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
-		FITNESS_TYPE temp = rudi_.uniform((FITNESS_TYPE) 0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
+		boost::random::uniform_real<> dist_roulette((FITNESS_TYPE) 0.0, (FITNESS_TYPE)sig_fit_[pop_size_-1]);
+		FITNESS_TYPE temp = dist_roulette(*rudi_);
 
 		for (iter=0; iter<pop_size_; iter++)
 		{
@@ -299,10 +318,12 @@ void population::selector(genotype_t& nana)
 	{
 		/// Tournament Selection
 		uint64_t iter, indi;
-		FITNESS_TYPE temp = 1.0e12;
+		FITNESS_TYPE temp = HORRIFIC_FITNESS_VALUE;
+		boost::random::uniform_int_distribution<> dist_tournament(0, pop_size_-1);
 		for (iter=0; iter<tree_s_; iter++)
 		{
-			indi = rudi_.uniform( 0, pop_size_ );
+//			indi = rudi_.uniform( 0, pop_size_ );
+			indi = dist_tournament(*rudi_);
 #ifdef MAXIMIZING_FITNESS_VALUE
 			if (pop_[indi].fit > temp)
 #else
@@ -311,67 +332,64 @@ void population::selector(genotype_t& nana)
 				nana = pop_[indi].gen;
 		}
 	}
-
 }
 
 void population::splicer(genotype_t& mama, genotype_t& papa)
 {
-	// Crossover loci (0 ~ 72)
+	// Crossover loci (0 ~ 6)
 
-	uint64_t iter;
-	uint64_t *locus;
-	locus = new uint64_t[xo_p_];
+	genotype_t ba = mama, by = papa;
 
-	GENO_TYPE mask;
-	genotype_t ba, by;
+	boost::random::uniform_real dist_xovr(0,(1/xo_r_));
+	boost::random::uniform_int dist_loci(0,NUMBER_GENES-1);
 
 	for (iter=0; iter<xo_p_; iter++)
 	{
-		if (rudi_.uniform( 0, (int)(1/xo_r_)) < 1)
+//		if (rudi_.uniform( 0, (int)(1/xo_r_)) < 1)
+		if (dist_xovr(*rudi_) < 1.0)
 		{
-			locus[iter] = rudi_.uniform(0, NUMBER_GENES);
+//			locus[iter] = rudi_.uniform(0, NUMBER_GENES);
+			uint64_t locus = dist_loci(*rudi_);
+			if (locus==0)
+			{
+				ba.nc = papa.nc;
+				by.nc = mama.nc;
+			}
+			else if (locus==1)
+			{
+				ba.len = papa.len;
+				by.len = mama.len;
+			}
+			else if (locus==2)
+			{
+				ba.sen1 = papa.sen1;
+				by.sen1 = mama.sen1;
+			}
+			else if (locus==3)
+			{
+				ba.sen2 = papa.sen2;
+				by.sen2 = mama.sen2;
+			}
+			else if (locus==4)
+			{
+				ba.scc = papa.scc;
+				by.scc = mama.scc;
+			}
+			else if (locus==5)
+			{
+				ba.rau = papa.rau;
+				by.rau = mama.rau;
+			}
+			else if (locus==6)
+			{
+				ba.nai = papa.nai;
+				by.nai = mama.nai;
+			}
 		}
 	}
-
-	std::vector<uint64_t> loci (locus, locus+xo_p_);
-	std::sort (loci.begin(), loci.end(), loci_comp);
-
-	std::vector<uint64_t>::iterator it;
-
-	it = std::unique(loci.begin(), loci.end());
-	loci.resize( std::distance(loci.begin(),it) );
-
-	it = loci.begin();
-
-	bool up=true;
-	for (iter=0; iter<NUMBER_GENES; iter++)
-	{
-		if ( (iter >= *it) && (it != loci.end()) )
-		{
-			++it;
-			if (up)
-				up = false;
-			else
-				up = true;
-//			up ^= up;
-		}
-		mask[iter] = up;
-	}
-//	cout << "\n" << mask;
-
-	ba.one = ( mask & mama.one) | (~mask & papa.one) ;
-	by.one = (~mask & mama.one) | ( mask & papa.one) ;
-
-	ba.two = ( mask & mama.two) | (~mask & papa.two) ;
-	by.two = (~mask & mama.two) | ( mask & papa.two) ;
-
-	ba.thr = ( mask & mama.two) | (~mask & papa.two) ;
-	by.thr = (~mask & mama.two) | ( mask & papa.two) ;
 
 	mama = ba;
 	papa = by;
-
-	delete[] locus;
 }
 
 void population::mutator(void)
@@ -383,106 +401,40 @@ void population::mutator(void)
 	}
 }
 
-FITNESS_TYPE population::calcFitness(genotype_t genie)
-{
-	FITNESS_TYPE y1 = 0, y2 = 0, y3 = 0, temp = 0;
-	uint64_t iter;
-
-	for (iter=0; iter<NUMBER_GENES; iter++)
-	{
-		if (genie.one[iter]==1)
-			y1 += West73_Yields[iter].Y1;
-		if (genie.two[iter]==1)
-			y2 += West73_Yields[iter].Y2;
-		if (genie.thr[iter]==1)
-			y3 += West73_Yields[iter].Y3;
-	}
-#ifdef MAXIMIZING_FITNESS_VALUE
-	temp = (y1+y2+y3);
-#else
-	temp = (34467.0-y1)*(34467.0-y1) + (34467.0-y2)*(34467.0-y2) + (34467.0-y3)*(34467.0-y3);
-#endif
-
-	fitness_calculation_counter_++;
-
-	return temp;
-}
-
-specimen_t population::populate(void)
-{
-	specimen_t indi;
-//	indi.gen.one = rudi_.uniform(0, 1<<(NUMBER_GENES));
-//	indi.gen.two = rudi_.uniform(0, 1<<(NUMBER_GENES));
-//	indi.gen.thr = rudi_.uniform(0, 1<<(NUMBER_GENES));
-//	indi.gen.one = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
-//	indi.gen.two = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
-//	indi.gen.thr = rudi_.uniform(0, 1<<32) | (rudi_.uniform(0, 1<<32)<<32) | (rudi_.uniform(0, 1<<9)<<64);
-	uint64_t iter;
-	for (iter=0; iter<NUMBER_GENES; iter++)
-	{
-		uint64_t selec = rudi_.uniform(1,5);
-		if (selec == 1)
-		{
-			indi.gen.one.set(iter);
-		}
-		else if (selec == 2)
-		{
-			indi.gen.two.set(iter);
-		}
-		if (selec == 3)
-		{
-			indi.gen.thr.set(iter);
-		}
-	}
-
-	fixer(indi);
-	indi.fit = calcFitness(indi.gen);
-	indi.calced = fitness_calculation_counter_;
-	return indi;
-}
-
 specimen_t population::mutate(specimen_t indi)
 {
-	uint64_t iter;
-	for (iter=0; iter<NUMBER_GENES; iter++)
+	boost::random::uniform_real<> dist_mutate(0, (1/mu_r_));
+	if ( dist_mutate(*rudi_) < 1)
 	{
-/*
-// Not great
-		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
-		{
-				indi.gen.one.flip(iter);
-				indi.gen.two.flip(iter);
-				indi.gen.thr.flip(iter);
-		}
-*/
-/*
-// Really crap results; never improves after first generation
-		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
-		{
-			uint64_t temp = rudi_.uniform( 1, 4 );
-			if (temp==1)
-				indi.gen.one.flip(iter);
-			else if (temp==2)
-				indi.gen.two.flip(iter);
-			else if (temp==3)
-				indi.gen.thr.flip(iter);
-		}
-*/
-// Works pretty well with randomness of fixer()
-		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
-		{
-			indi.gen.one.flip(iter);
-		}
-		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
-		{
-			indi.gen.two.flip(iter);
-		}
-		if (rudi_.uniform( 0, (int)(1/mu_r_) ) < 1)
-		{
-			indi.gen.thr.flip(iter);
-		}
+		indi.gen.nc = dist_nc(*rudi_);
 	}
-	fixer(indi);
+	if ( dist_mutate(*rudi_) < 1)
+	{
+		indi.gen.len = dist_len(*rudi_);
+	}
+	if ( dist_mutate(*rudi_) < 1)
+	{
+		indi.gen.sen1 = dist_sen1(*rudi_);
+	}
+	if ( dist_mutate(*rudi_) < 1)
+	{
+		indi.gen.sen2 = dist_sen2(*rudi_);
+	}
+	if ( dist_mutate(*rudi_) < 1)
+	{
+		indi.gen.scc = dist_scc(*rudi_);
+	}
+	if ( dist_mutate(*rudi_) < 1)
+	{
+		indi.gen.rau = dist_rau(*rudi_);
+	}
+	if ( dist_mutate(*rudi_) < 1)
+	{
+		indi.gen.nai = dist_nai(*rudi);
+	}
+
+
+//	fixer(indi);
 	indi.fit = calcFitness(indi.gen);
 	indi.calced = fitness_calculation_counter_;
 	return indi;
@@ -490,72 +442,75 @@ specimen_t population::mutate(specimen_t indi)
 
 void population::fixer(specimen_t& indi)
 {
-	uint64_t iter;
 
-	// Randomize list of indices to decrease bias
-	Mat lister(1, NUMBER_GENES, CV_8UC1);
-	for (iter=0; iter<NUMBER_GENES; iter++)
-	{
-		lister.at<uint8_t>(iter) = iter;
-	}
-	randShuffle(lister, 1, &rudi_);
+}
 
-	// Fix for adjacency
-	for (iter=0; iter<NUMBER_GENES; iter++)
-	{
-		if (indi.gen.one[lister.at<uint8_t>(iter)]==1)
-		{
-			indi.gen.one &= West73_Adjacency[lister.at<uint8_t>(iter)];
-		}
-		if (indi.gen.two[lister.at<uint8_t>(iter)]==1)
-		{
-			indi.gen.two &= West73_Adjacency[lister.at<uint8_t>(iter)];
-		}
-		if (indi.gen.thr[lister.at<uint8_t>(iter)]==1)
-		{
-			indi.gen.thr &= West73_Adjacency[lister.at<uint8_t>(iter)];
-		}
-	}
+FITNESS_TYPE population::calcFitness(genotype_t genie)
+{
+	FITNESS_TYPE temp = 0.0;
 
-	// Fix for repeated harvesting
-	uint64_t temp = rudi_.uniform(1,4);
-	if (temp==1)
-	{
-		indi.gen.two &= ~indi.gen.one;
-		indi.gen.thr &= ~indi.gen.one;
+/// Cardinality Term (minimize number of components in shopping list)
+	FITNESS_TYPE cardinality_term = 0.0;
+	cardinality_term = 50 / ( ( (genie.nc/42) + (genie.len/9) + (genie.sen1/168) + (genie.sen2/56) + (genie.scc/7) + (genie.rau/92) + (genie.nai/4) ) * 0.142857);
 
-		temp = rudi_.uniform(0,2);
-		if (temp==0)
-			indi.gen.thr &= ~indi.gen.two;
-		else
-			indi.gen.two &= ~indi.gen.thr;
-	}
-	else if (temp==2)
-	{
-		indi.gen.one &= ~indi.gen.two;
-		indi.gen.thr &= ~indi.gen.two;
+/// Ratio of SEN1 to SEN2 (SEN2 are more expensive and less common)
+	FITNESS_TYPE sen_ratio = genie.sen1/genie.sen2;
 
-		temp = rudi_.uniform(0,2);
-		if (temp==0)
-			indi.gen.thr &= ~indi.gen.one;
-		else
-			indi.gen.one &= ~indi.gen.thr;
-	}
-	else if (temp==3)
-	{
-		indi.gen.one &= ~indi.gen.thr;
-		indi.gen.two &= ~indi.gen.thr;
+/// Antenna constraints
+	FITNESS_TYPE uhf_connectivity = 1.0;
 
-		temp = rudi_.uniform(0,2);
-		if (temp==0)
-			indi.gen.two &= ~indi.gen.one;
-		else
-			indi.gen.one &= ~indi.gen.two;
-	}
+	uint64_t ant_other = (genie.len*2) + (genie.sen1*1) + (genie.sen2*1) + (genie.rau*1) + (genie.nai*1);
+	uint64_t ant_total = genie.nc * 12;
+	uint64_t x = ( (genie.nc-1) % 4 ) + 1;
+	uint64_t y = (genie.nc-1) / 4;
+	uint64_t z = y + 1;
+	uint64_t ant_backbone = ( 32 * y ) - ( x * x ) + ( 13 * x );
 
-//	indi.gen.two &= ~indi.gen.one;
-//	indi.gen.thr &= ~indi.gen.one;
-//	indi.gen.thr &= ~indi.gen.two;
+	uint64_t ant_needed = ant_total - ant_backbone + ant_other;
+
+	if (ant_needed > 12)
+		uhf_connectivity = (ant_needed / ant_total);
+
+/// Mobile Subscriber Radiotelephone Terminal (supported by Radio via RAU)
+	uint64_t msrt_supported = (genie.rau*25);
+	FITNESS_TYPE msrt_ratio;
+	if (msrt_supported < msrt_)
+		msrt_ratio = 0.0;
+	else
+		msrt_ratio = msrt_supported / msrt_;
+
+
+/// Digital Nonsecure Voice Terminal (supported by Wire via NC, LEN, SEN1, SEN2)
+	uint64_t dnvt_supported = (genie.nc*24) + (genie.len*176) + (genie.sen1*26) + (genie.sen2*41);
+	FITNESS_TYPE dnvt_ratio;
+	if (dnvt_supported < dnvt_)
+		dnvt_ratio = 0.0;
+	else
+		dnvt_ratio = dnvt_supported / dnvt_;
+
+/// Maximum Constraints Term
+	uint64_t max_term = 1.0;
+	if (genie.nc > (z*4))
+		max_term = 0.0;
+	if (genie.len > (z*1))
+		max_term = 0.0;
+	if (genie.sen1 > (z*12))
+		max_term = 0.0;
+	if (genie.sen2 > (z*4))
+		max_term = 0.0;
+	if (genie.scc > (z*1))
+		max_term = 0.0;
+	if (genie.rau > (z*9))
+		max_term = 0.0;
+	if (genie.nai > (z*1))
+		max_term = 0.0;
+
+/// Fitness
+	temp = cardinality_term * sen_ratio * uhf_connectivity * msrt_ratio * dnvt_ratio * max_term;
+
+	fitness_calculation_counter_++;
+
+	return temp;
 }
 
 
@@ -568,6 +523,8 @@ int main(int argc, char* argv[])
 	uint64_t tree_s = 0;
 	bool elitism = false;
 	uint64_t num_trials = NUMBER_TRIALS;
+	uint64_t num_gens = NUMBER_GENERATIONS;
+	uint64_t gen_limit = NUMBER_GENERATIONS/10;
 
 	string	out_filename = "./mse_fp_best.csv";
 
@@ -585,6 +542,7 @@ int main(int argc, char* argv[])
 			("tree",	po::value<uint64_t>(),		"Set Size of Tournament Tree")
 			("el",		po::value<bool>(),			"Enable Elitism")
 			("trials",	po::value<uint64_t>(),		"Set Number of Trials")
+			("gens",	po::value<uint64_t>(),		"Set Number of Generations")
 			("out",		po::value<string>(),		"Set output filename")
 		;
 
@@ -659,6 +617,19 @@ int main(int argc, char* argv[])
 			cout << "Number of Trials was set to default of " << num_trials << ".\n";
 		}
 
+		if (vm.count("gens"))
+		{
+			num_gens = vm["gens"].as<uint64_t>();
+			gen_limit = num_gens/10;
+			if (gen_limit < 50)
+				gen_limit = 50;
+			cout << "Number of Generations was set to " << num_gens << ".\n";
+		}
+		else
+		{
+			cout << "Number of Generations was set to default of " << num_gens << ".\n";
+		}
+
 		if (vm.count("el"))
 		{
 			elitism = vm["el"].as<bool>();
@@ -708,9 +679,9 @@ int main(int argc, char* argv[])
 	}
 
 //	outfileTheBest.precision(35);
-	uint64_t best_default_precision = outfileTheBest.precision();
+//	uint64_t best_default_precision = outfileTheBest.precision();
 
-	outfileTheBest << "NumGens,PopSize,Tree_S,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness,Yield";
+	outfileTheBest << "NumGens,PopSize,Tree_S,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,NC,LEN,SEN1,SEN2,SCC,RAU,NAI,Fitness";
 
 	population *hoponpop;
 
@@ -723,8 +694,8 @@ int main(int argc, char* argv[])
 		uint64_t rng_seed = getTickCount();
 		RNG randi (rng_seed);
 
-	// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism);
-		hoponpop = new population(&randi, pop_size, mu_r, xo_r, xo_p, tree_s, elitism, msrt, dnvt);
+	// population(RNG& rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt);
+		hoponpop = new population(&randi, pop_size, mu_r, xo_r, xo_p, tree_s, elitism, gen_limit, msrt, dnvt);
 
 //		cout << "Trial: " << trailer_trash << endl;
 		if (trailer_trash==0)
@@ -735,7 +706,7 @@ int main(int argc, char* argv[])
 		hoponpop->populator();
 
 		uint64_t generational_recursion;
-		for (generational_recursion=0; generational_recursion<NUMBER_GENERATIONS; generational_recursion++)
+		for (generational_recursion=0; generational_recursion<num_gens; generational_recursion++)
 		{
 //			cout << "Generation: " << generational_recursion << endl;
 //			hoponpop.breeder();
@@ -745,29 +716,14 @@ int main(int argc, char* argv[])
 
 		specimen_t bestever = hoponpop->BestEver();
 		uint64_t aged = hoponpop->Age();
-//		outfileTheBest << "NumGens,PopSize,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,Geno1,Geno2,Geno3,Fitness";
-		outfileTheBest.precision(best_default_precision);
-		outfileTheBest << "\n" << NUMBER_GENERATIONS << "," << pop_size << "," << tree_s << "," << xo_p << "," << xo_r << "," << mu_r << "," << elitism << ",";
+//		outfileTheBest << "NumGens,PopSize,Tree_S,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,NC,LEN,SEN1,SEN2,SCC,RAU,NAI,Fitness";
+//		outfileTheBest.precision(best_default_precision);
+		outfileTheBest << "\n" << num_gens << "," << pop_size << "," << tree_s << "," << xo_p << "," << xo_r << "," << mu_r << "," << elitism << ",";
 		outfileTheBest << rng_seed << "," << trailer_trash << "," << bestever.calced << "," << aged << ",";
-		outfileTheBest.precision(35);
-		outfileTheBest << bestever.gen.one << "," << bestever.gen.two << "," << bestever.gen.thr << ",";
-
-		FITNESS_TYPE y1 = 0, y2 = 0, y3 = 0;
-
-		for (iter=0; iter<NUMBER_GENES; iter++)
-		{
-			if (bestever.gen.one[iter]==1)
-				y1 += West73_Yields[iter].Y1;
-			if (bestever.gen.two[iter]==1)
-				y2 += West73_Yields[iter].Y2;
-			if (bestever.gen.thr[iter]==1)
-				y3 += West73_Yields[iter].Y3;
-		}
-#ifdef MAXIMIZING_FITNESS_VALUE
-		outfileTheBest << ((34467.0-y1)*(34467.0-y1) + (34467.0-y2)*(34467.0-y2) + (34467.0-y3)*(34467.0-y3)) << "," << bestever.fit;
-#else
-		outfileTheBest << bestever.fit << "," << (y1+y2+y3);
-#endif
+		outfileTheBest << bestever.gen.nc << "," << bestever.gen.len << "," << bestever.gen.sen1 << "," << bestever.gen.sen2 << ",";
+		outfileTheBest << bestever.gen.scc << "," << bestever.gen.rau << "," << bestever.gen.nai << ",";
+//		outfileTheBest.precision(16);
+		outfileTheBest << bestever.fit
 
 		outfileTheBest.flush();
 

@@ -9,7 +9,8 @@
 
 #include <boost/program_options.hpp>
 #include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_int_distribution.hpp>
+#include <boost/random/uniform_int.hpp>
+#include <boost/random/uniform_real.hpp>
 
 using namespace boost;
 namespace po = boost::program_options;
