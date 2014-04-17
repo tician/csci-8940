@@ -451,12 +451,25 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 
 /// Cardinality Term (minimize number of components in shopping list)
 	FITNESS_TYPE cardinality_term = 0.0;
-	cardinality_term = 50 / ( ( (genie.nc/42) + (genie.len/9) + (genie.sen1/168) + (genie.sen2/56) + (genie.scc/7) + (genie.rau/92) + (genie.nai/4) ) * 0.142857);
+	cardinality_term = 50 / (
+		(
+			(genie.nc/42) +
+			(genie.len/9) +
+			(genie.sen1/168) +
+			(genie.sen2/56) +
+			(genie.scc/7) +
+			(genie.rau/92) +
+			(genie.nai/4)
+		) * 0.142857 );
 
 /// Ratio of SEN1 to SEN2 (SEN2 are more expensive and less common)
-	FITNESS_TYPE sen_ratio = genie.sen1/genie.sen2;
+	FITNESS_TYPE sen_ratio = 0.0;
+	if (genie.sen1 > (3*genie.sen2))
+		sen_ratio = (3*genie.sen2)/genie.sen1;
+	else
+		sen_ratio = genie.sen1/(3*genie.sen2);
 
-/// Antenna constraints
+/// Antenna Constraint Term
 	FITNESS_TYPE uhf_connectivity = 1.0;
 
 	uint64_t ant_other = (genie.len*2) + (genie.sen1*1) + (genie.sen2*1) + (genie.rau*1) + (genie.nai*1);
@@ -468,8 +481,8 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 
 	uint64_t ant_needed = ant_total - ant_backbone + ant_other;
 
-	if (ant_needed > 12)
-		uhf_connectivity = (ant_needed / ant_total);
+	if ( (ant_total - ant_needed) > 12)
+		uhf_connectivity = (ant_needed/ant_total);
 
 /// Mobile Subscriber Radiotelephone Terminal (supported by Radio via RAU)
 	uint64_t msrt_supported = (genie.rau*25);
@@ -477,8 +490,7 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 	if (msrt_supported < msrt_)
 		msrt_ratio = 0.0;
 	else
-		msrt_ratio = msrt_supported / msrt_;
-
+		msrt_ratio = msrt_ / msrt_supported;
 
 /// Digital Nonsecure Voice Terminal (supported by Wire via NC, LEN, SEN1, SEN2)
 	uint64_t dnvt_supported = (genie.nc*24) + (genie.len*176) + (genie.sen1*26) + (genie.sen2*41);
@@ -486,7 +498,7 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 	if (dnvt_supported < dnvt_)
 		dnvt_ratio = 0.0;
 	else
-		dnvt_ratio = dnvt_supported / dnvt_;
+		dnvt_ratio = dnvt_ / dnvt_supported;
 
 /// Maximum Constraints Term
 	uint64_t max_term = 1.0;
