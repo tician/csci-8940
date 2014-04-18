@@ -3,9 +3,21 @@
 
 typedef boost::mt19937 RNG_t;
 
+boost::uniform_int<> dist_nc(1, 42);		// must have at least 1
+boost::uniform_int<> dist_len(1, 9);
+boost::uniform_int<> dist_sen1(1, 168);
+boost::uniform_int<> dist_sen2(1, 56);
+boost::uniform_int<> dist_scc(1, 7);		// must have at least 1
+boost::uniform_int<> dist_rau(1, 92);
+boost::uniform_int<> dist_nai(1, 4);
+
 typedef struct genotype_t
 {
-	genotype_t(void) : nc(0), len(0), sen1(0), sen2(0), scc(0) , rau(0), nai(0) {};
+	genotype_t(void) : nc(1), len(1), sen1(1), sen2(1), scc(1), rau(1), nai(1) {};
+	genotype_t(RNG_t* rudi) :	nc(dist_nc(*rudi)), len(dist_len(*rudi)),
+								sen1(dist_sen1(*rudi)), sen2(dist_sen2(*rudi)),
+								scc(dist_scc(*rudi)), rau(dist_rau(*rudi)),
+								nai(dist_nai(*rudi)) {};
 
 	GENO_TYPE		nc, len, sen1, sen2, scc, rau, nai;
 } genotype_t;
@@ -13,6 +25,7 @@ typedef struct genotype_t
 typedef struct specimen_t
 {
 	specimen_t(void) : fit(HORRIFIC_FITNESS_VALUE), gen(), calced(0) {};
+	specimen_t(RNG_t* rudi) : fit(HORRIFIC_FITNESS_VALUE), gen(rudi), calced(0) {};
 
 	FITNESS_TYPE	fit;
 	genotype_t		gen;
@@ -63,6 +76,7 @@ private:
 	uint64_t fitness_calculation_counter_;
 
 	RNG_t *rudi_;
+/*
 	boost::uniform_int<> dist_nc;//(1, 42);		// must have at least 1
 	boost::uniform_int<> dist_len;//(1, 9);
 	boost::uniform_int<> dist_sen1;//(1, 168);
@@ -70,7 +84,7 @@ private:
 	boost::uniform_int<> dist_scc;//(1, 7);		// must have at least 1
 	boost::uniform_int<> dist_rau;//(1, 92);
 	boost::uniform_int<> dist_nai;//(1, 4);
-
+*/
 	uint64_t pop_size_;
 	double mu_r_;
 	double xo_r_;
@@ -83,7 +97,8 @@ private:
 	uint64_t dnvt_;
 
 	void roulette(void);
-	void selector(genotype_t&);
+//	void selector(genotype_t&);
+	genotype_t selector(void);
 	void splicer(genotype_t&, genotype_t&);
 	void mutator(void);
 
@@ -93,7 +108,8 @@ private:
 
 	FITNESS_TYPE calcFitness(genotype_t);
 	specimen_t populate(void);
-	specimen_t mutate(specimen_t);
+//	specimen_t mutate(specimen_t);
+	void mutate(specimen_t&);
 	void fixer(specimen_t&);
 
 public:
@@ -108,6 +124,7 @@ public:
 };
 
 population::population(RNG_t *rudi, uint64_t pop_size, double mu_r, double xo_r, uint64_t xo_p, uint64_t tree_s, bool elitism, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt)
+/*
 : dist_nc(1, 42)
 , dist_len(1, 9)
 , dist_sen1(1, 168)
@@ -115,8 +132,8 @@ population::population(RNG_t *rudi, uint64_t pop_size, double mu_r, double xo_r,
 , dist_scc(1, 7)
 , dist_rau(1, 92)
 , dist_nai(1, 4)
+*/
 {
-
 	rudi_ = rudi;
 	pop_size_ = pop_size;
 	fitness_calculation_counter_ = 0;
@@ -135,6 +152,7 @@ population::population(RNG_t *rudi, uint64_t pop_size, double mu_r, double xo_r,
 	if (tree_s_==0)
 		sig_fit_ = new FITNESS_TYPE[pop_size_];
 
+//	cout << "rng_test: " << dist_sen1(*rudi_) << "\n";
 }
 
 population::~population(void)
@@ -205,13 +223,20 @@ void population::populator(void)
 	for (iter=0; iter<pop_size_; iter++)
 	{
 		pop_[iter] = populate();
+		assert(pop_[iter].gen.nc>0);
+		assert(pop_[iter].gen.len>0);
+		assert(pop_[iter].gen.sen1>0);
+		assert(pop_[iter].gen.sen2>0);
+		assert(pop_[iter].gen.scc>0);
+		assert(pop_[iter].gen.rau>0);
+		assert(pop_[iter].gen.nai>0);
 	}
 	bestest();
 }
 
 specimen_t population::populate(void)
 {
-	specimen_t indi;
+	specimen_t indi(rudi_);
 
 	indi.gen.nc = dist_nc(*rudi_);
 	indi.gen.len = dist_len(*rudi_);
@@ -220,7 +245,15 @@ specimen_t population::populate(void)
 	indi.gen.scc = dist_scc(*rudi_);
 	indi.gen.rau = dist_rau(*rudi_);
 	indi.gen.nai = dist_nai(*rudi_);
-
+/*
+	assert(indi.gen.nc>0);
+	assert(indi.gen.len>0);
+	assert(indi.gen.sen1>0);
+	assert(indi.gen.sen2>0);
+	assert(indi.gen.scc>0);
+	assert(indi.gen.rau>0);
+	assert(indi.gen.nai>0);
+*/
 //	fixer(indi);
 	indi.fit = calcFitness(indi.gen);
 	indi.calced = fitness_calculation_counter_;
@@ -237,15 +270,28 @@ void population::breeder(void)
 		roulette();
 
 	uint64_t iter;
-
+/*
+	for (iter=0; iter<pop_size_; iter++)
+	{
+		assert(pop_[iter].gen.nc>0);
+		assert(pop_[iter].gen.len>0);
+		assert(pop_[iter].gen.sen1>0);
+		assert(pop_[iter].gen.sen2>0);
+		assert(pop_[iter].gen.scc>0);
+		assert(pop_[iter].gen.rau>0);
+		assert(pop_[iter].gen.nai>0);
+	}
+*/
 	if (elitism_)
 	{
 		for (iter=0; iter<(pop_size_/2)-2; iter++)
 		{
-			genotype_t mama, papa;
+//			genotype_t mama, papa;
 
-			selector(mama);
-			selector(papa);
+//			selector(mama);
+//			selector(papa);
+			genotype_t mama = selector();
+			genotype_t papa = selector();
 			splicer(mama, papa);
 			kiddies_[(2*iter)+0] = mama;
 			kiddies_[(2*iter)+1] = papa;
@@ -257,10 +303,12 @@ void population::breeder(void)
 	{
 		for (iter=0; iter<(pop_size_/2); iter++)
 		{
-			genotype_t mama, papa;
+//			genotype_t mama, papa;
 
-			selector(mama);
-			selector(papa);
+//			selector(mama);
+//			selector(papa);
+			genotype_t mama = selector();
+			genotype_t papa = selector();
 			splicer(mama, papa);
 			kiddies_[(2*iter)+0] = mama;
 			kiddies_[(2*iter)+1] = papa;
@@ -297,8 +345,10 @@ void population::roulette(void)
 }
 
 
-void population::selector(genotype_t& nana)
+//void population::selector(genotype_t& nana)
+genotype_t population::selector(void)
 {
+	genotype_t nana(rudi_);
 	if (tree_s_ == 0)
 	{
 		/// Roulette Wheel Selection
@@ -319,21 +369,22 @@ void population::selector(genotype_t& nana)
 	else
 	{
 		/// Tournament Selection
-		uint64_t iter, indi;
-		FITNESS_TYPE temp = HORRIFIC_FITNESS_VALUE;
 		boost::uniform_int<> dist_tournament(0, pop_size_-1);
+
+		FITNESS_TYPE temp = HORRIFIC_FITNESS_VALUE;
+		uint64_t iter, indi;
 		for (iter=0; iter<tree_s_; iter++)
 		{
-//			indi = rudi_.uniform( 0, pop_size_ );
 			indi = dist_tournament(*rudi_);
 #ifdef MAXIMIZING_FITNESS_VALUE
-			if (pop_[indi].fit > temp)
+			if (pop_[indi].fit >= temp)
 #else
-			if (pop_[indi].fit < temp)
+			if (pop_[indi].fit <= temp)
 #endif
 				nana = pop_[indi].gen;
 		}
 	}
+	return nana;
 }
 
 void population::splicer(genotype_t& mama, genotype_t& papa)
@@ -341,7 +392,23 @@ void population::splicer(genotype_t& mama, genotype_t& papa)
 	// Crossover loci (0 ~ 6)
 
 	genotype_t ba = mama, by = papa;
+/*
+	assert(ba.nc>0);
+	assert(ba.len>0);
+	assert(ba.sen1>0);
+	assert(ba.sen2>0);
+	assert(ba.scc>0);
+	assert(ba.rau>0);
+	assert(ba.nai>0);
 
+	assert(by.nc>0);
+	assert(by.len>0);
+	assert(by.sen1>0);
+	assert(by.sen2>0);
+	assert(by.scc>0);
+	assert(by.rau>0);
+	assert(by.nai>0);
+*/
 	boost::uniform_real<> dist_xovr(0,(1/xo_r_));
 	boost::uniform_int<> dist_loci(0,NUMBER_GENES-1);
 
@@ -351,7 +418,6 @@ void population::splicer(genotype_t& mama, genotype_t& papa)
 //		if (rudi_.uniform( 0, (int)(1/xo_r_)) < 1)
 		if (dist_xovr(*rudi_) < 1.0)
 		{
-//			locus[iter] = rudi_.uniform(0, NUMBER_GENES);
 			uint64_t locus = dist_loci(*rudi_);
 			if (locus==0)
 			{
@@ -390,7 +456,23 @@ void population::splicer(genotype_t& mama, genotype_t& papa)
 			}
 		}
 	}
+/*
+	assert(ba.nc>0);
+	assert(ba.len>0);
+	assert(ba.sen1>0);
+	assert(ba.sen2>0);
+	assert(ba.scc>0);
+	assert(ba.rau>0);
+	assert(ba.nai>0);
 
+	assert(by.nc>0);
+	assert(by.len>0);
+	assert(by.sen1>0);
+	assert(by.sen2>0);
+	assert(by.scc>0);
+	assert(by.rau>0);
+	assert(by.nai>0);
+*/
 	mama = ba;
 	papa = by;
 }
@@ -400,12 +482,23 @@ void population::mutator(void)
 	uint64_t iter;
 	for (iter=0; iter<pop_size_; iter++)
 	{
-		pop_[iter] = mutate(pop_[iter]);
+//		pop_[iter] = mutate(pop_[iter]);
+		mutate(pop_[iter]);
 	}
 }
 
-specimen_t population::mutate(specimen_t indi)
+//specimen_t population::mutate(specimen_t indi)
+void population::mutate(specimen_t& indi)
 {
+/*
+	assert(indi.gen.nc>0);
+	assert(indi.gen.len>0);
+	assert(indi.gen.sen1>0);
+	assert(indi.gen.sen2>0);
+	assert(indi.gen.scc>0);
+	assert(indi.gen.rau>0);
+	assert(indi.gen.nai>0);
+*/
 	boost::uniform_real<> dist_mutate(0, (1/mu_r_));
 	if ( dist_mutate(*rudi_) < 1)
 	{
@@ -435,12 +528,19 @@ specimen_t population::mutate(specimen_t indi)
 	{
 		indi.gen.nai = dist_nai(*rudi_);
 	}
-
-
+/*
+	assert(indi.gen.nc>0);
+	assert(indi.gen.len>0);
+	assert(indi.gen.sen1>0);
+	assert(indi.gen.sen2>0);
+	assert(indi.gen.scc>0);
+	assert(indi.gen.rau>0);
+	assert(indi.gen.nai>0);
+*/
 //	fixer(indi);
 	indi.fit = calcFitness(indi.gen);
 	indi.calced = fitness_calculation_counter_;
-	return indi;
+//	return indi;
 }
 
 void population::fixer(specimen_t& indi)
@@ -454,23 +554,23 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 
 /// Cardinality Term (minimize number of components in shopping list)
 	FITNESS_TYPE cardinality_term = 0.0;
-	cardinality_term = 50 / (
+	cardinality_term = (FITNESS_TYPE) 50.0 / (
 		(
-			(genie.nc/42) +
-			(genie.len/9) +
-			(genie.sen1/168) +
-			(genie.sen2/56) +
-			(genie.scc/7) +
-			(genie.rau/92) +
-			(genie.nai/4)
+			(genie.nc/42.0) +
+			(genie.len/9.0) +
+			(genie.sen1/168.0) +
+			(genie.sen2/56.0) +
+			(genie.scc/7.0) +
+			(genie.rau/92.0) +
+			(genie.nai/4.0)
 		) * 0.142857 );
 
 /// Ratio of SEN1 to SEN2 (SEN2 are more expensive and less common)
 	FITNESS_TYPE sen_ratio = 0.0;
 	if (genie.sen1 > (3*genie.sen2))
-		sen_ratio = (3*genie.sen2)/genie.sen1;
+		sen_ratio = (FITNESS_TYPE) (3.0*genie.sen2)/genie.sen1;
 	else
-		sen_ratio = genie.sen1/(3*genie.sen2);
+		sen_ratio = (FITNESS_TYPE) genie.sen1/(3.0*genie.sen2);
 
 /// Antenna Constraint Term
 	FITNESS_TYPE uhf_connectivity = 1.0;
@@ -485,7 +585,7 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 	uint64_t ant_needed = ant_total - ant_backbone + ant_other;
 
 	if ( (ant_total - ant_needed) > 12)
-		uhf_connectivity = (ant_needed/ant_total);
+		uhf_connectivity = (FITNESS_TYPE) ant_needed / (FITNESS_TYPE) ant_total;
 
 /// Mobile Subscriber Radiotelephone Terminal (supported by Radio via RAU)
 	uint64_t msrt_supported = (genie.rau*25);
@@ -493,7 +593,7 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 	if (msrt_supported < msrt_)
 		msrt_ratio = 0.0;
 	else
-		msrt_ratio = msrt_ / msrt_supported;
+		msrt_ratio = (FITNESS_TYPE) msrt_ / (FITNESS_TYPE) msrt_supported;
 
 /// Digital Nonsecure Voice Terminal (supported by Wire via NC, LEN, SEN1, SEN2)
 	uint64_t dnvt_supported = (genie.nc*24) + (genie.len*176) + (genie.sen1*26) + (genie.sen2*41);
@@ -501,7 +601,14 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 	if (dnvt_supported < dnvt_)
 		dnvt_ratio = 0.0;
 	else
-		dnvt_ratio = dnvt_ / dnvt_supported;
+		dnvt_ratio = (FITNESS_TYPE) dnvt_ / (FITNESS_TYPE) dnvt_supported;
+
+/// Minimum Constraints Term
+	uint64_t min_term = 1.0;
+	if (genie.nc == 0)
+		min_term = 0.0;
+	if (genie.scc == 0)
+		min_term = 0.0;
 
 /// Maximum Constraints Term
 	uint64_t max_term = 1.0;
@@ -521,7 +628,7 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 		max_term = 0.0;
 
 /// Fitness
-	temp = cardinality_term * sen_ratio * uhf_connectivity * msrt_ratio * dnvt_ratio * max_term;
+	temp = cardinality_term * sen_ratio * uhf_connectivity * msrt_ratio * dnvt_ratio * min_term * max_term;
 
 	fitness_calculation_counter_++;
 
@@ -720,7 +827,7 @@ int main(int argc, char* argv[])
 	}
 
 //	outfileTheBest.precision(35);
-//	uint64_t best_default_precision = outfileTheBest.precision();
+//	uint64_t best_default_width = outfileTheBest.width();
 
 	outfileTheBest << "NumGens,PopSize,Tree_S,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,NC,LEN,SEN1,SEN2,SCC,RAU,NAI,Fitness";
 
@@ -728,13 +835,20 @@ int main(int argc, char* argv[])
 
 
 //	last_tick_count = (double) getTickCount();
-	last_tick_count = (double) std::time(0);
+//	last_tick_count = (double) std::time(0);
+
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	last_tick_count = (double) (ts.tv_sec) + (double)(ts.tv_nsec/1000000000.0);
 
 	uint64_t trailer_trash;
 	for (trailer_trash=0; trailer_trash<num_trials; trailer_trash++)
 	{
 //		uint64_t rng_seed = getTickCount();
-		uint64_t rng_seed = std::time(0);
+//		uint64_t rng_seed = std::time(0);
+
+		clock_gettime(CLOCK_REALTIME, &ts);
+		uint64_t rng_seed = (ts.tv_sec*1000000000) + ts.tv_nsec;
 
 		RNG_t randi (rng_seed);
 
@@ -761,13 +875,13 @@ int main(int argc, char* argv[])
 		specimen_t bestever = hoponpop->BestEver();
 		uint64_t aged = hoponpop->Age();
 //		outfileTheBest << "NumGens,PopSize,Tree_S,XO_P,XO_R,MU_R,Elitism,RNG_Seed,Trial,FitEvals,EndGen,NC,LEN,SEN1,SEN2,SCC,RAU,NAI,Fitness";
-//		outfileTheBest.precision(best_default_precision);
 		outfileTheBest << "\n" << num_gens << "," << pop_size << "," << tree_s << "," << xo_p << "," << xo_r << "," << mu_r << "," << elitism << ",";
-		outfileTheBest << rng_seed << "," << trailer_trash << "," << bestever.calced << "," << aged << ",";
+//		outfileTheBest.width(35);
+		outfileTheBest << rng_seed;
+//		outfileTheBest.width(best_default_width);
+		outfileTheBest << "," << trailer_trash << "," << bestever.calced << "," << aged << ",";
 		outfileTheBest << bestever.gen.nc << "," << bestever.gen.len << "," << bestever.gen.sen1 << "," << bestever.gen.sen2 << ",";
-		outfileTheBest << bestever.gen.scc << "," << bestever.gen.rau << "," << bestever.gen.nai << ",";
-//		outfileTheBest.precision(16);
-		outfileTheBest << bestever.fit;
+		outfileTheBest << bestever.gen.scc << "," << bestever.gen.rau << "," << bestever.gen.nai << "," << bestever.fit;
 
 		outfileTheBest.flush();
 
@@ -779,7 +893,10 @@ int main(int argc, char* argv[])
 	outfileTheBest.flush();
 
 //	cout << "\tProcessing time: " << ((double) getTickCount() - last_tick_count)/getTickFrequency() << "[s]\n";
-	cout << "\tProcessing time: " << ((double) std::time(0) - last_tick_count) << "[s]\n";
+//	cout << "\tProcessing time: " << ((double) std::time(0) - last_tick_count) << "[s]\n";
+
+	clock_gettime(CLOCK_REALTIME, &ts);
+	cout << "\tProcessing time: " << ( (double)(ts.tv_sec) + (double)(ts.tv_nsec/1000000000.0) ) - last_tick_count << "[s]\n";
 
 	outfileTheBest.close();
 

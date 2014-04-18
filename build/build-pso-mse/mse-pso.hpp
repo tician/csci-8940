@@ -2,7 +2,6 @@
 #include <iostream>
 #include <sstream>
 //#include <bitset>
-//#include <ctime>
 #include <sys/time.h>
 
 #include <algorithm>
@@ -14,6 +13,7 @@
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/uniform_real.hpp>
 
+
 using namespace boost;
 namespace po = boost::program_options;
 using namespace std;
@@ -23,7 +23,7 @@ using namespace std;
 #define NUMBER_GENERATIONS			30000
 
 #define NUMBER_TRACKING				3
-#define NUMBER_GENES				7
+#define NUMBER_ATTRIBUTES			7
 
 #define MAXIMIZING_FITNESS_VALUE
 
@@ -35,6 +35,4 @@ using namespace std;
 
 #define FITNESS_TYPE				double
 #define GENO_TYPE					uint64_t
-//#define GENO_TYPE					bitset<NUMBER_GENES>
-
-
+//#define GENO_TYPE					bitset<NUMBER_ATTRIBUTES>

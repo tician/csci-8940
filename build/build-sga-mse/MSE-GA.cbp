@@ -50,6 +50,7 @@
 			<Add directory="/usr/include/boost" />
 		</Compiler>
 		<Linker>
+			<Add option="-lrt" />
 			<Add library="/usr/lib/libboost_program_options.so" />
 		</Linker>
 		<Unit filename="msega.cpp" />
