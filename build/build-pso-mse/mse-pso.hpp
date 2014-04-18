@@ -22,7 +22,6 @@ using namespace std;
 #define NUMBER_TRIALS				10
 #define NUMBER_GENERATIONS			30000
 
-#define NUMBER_TRACKING				3
 #define NUMBER_ATTRIBUTES			7
 
 #define MAXIMIZING_FITNESS_VALUE
@@ -36,3 +35,6 @@ using namespace std;
 #define FITNESS_TYPE				double
 #define GENO_TYPE					uint64_t
 //#define GENO_TYPE					bitset<NUMBER_ATTRIBUTES>
+
+#define MIN_VELO					-4.0
+#define MAX_VELO					4.0

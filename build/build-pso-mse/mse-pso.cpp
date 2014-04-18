@@ -11,36 +11,59 @@ boost::uniform_real<> dist_scc(1, 7);		// must have at least 1
 boost::uniform_real<> dist_rau(1, 92);
 boost::uniform_real<> dist_nai(1, 4);
 
+boost::uniform_real<> dist_velo(MIN_VELO, MAX_VELO);
+
+
 typedef struct genotype_t
 {
-//	genotype_t(void) : nc(1), len(1), sen1(1), sen2(1), scc(1), rau(1), nai(1) {};
+	genotype_t(void) : nc(0), len(0), sen1(0), sen2(0), scc(0), rau(0), nai(0) {};
 //	genotype_t(RNG_t* rudi) :	nc(dist_nc(*rudi)), len(dist_len(*rudi)),
 //								sen1(dist_sen1(*rudi)), sen2(dist_sen2(*rudi)),
 //								scc(dist_scc(*rudi)), rau(dist_rau(*rudi)),
 //								nai(dist_nai(*rudi)) {};
-	genotype_t(void) :	nc(dist_nc(rudi_)), len(dist_len(rudi_)),
-								sen1(dist_sen1(rudi_)), sen2(dist_sen2(rudi_)),
-								scc(dist_scc(rudi_)), rau(dist_rau(rudi_)),
-								nai(dist_nai(rudi_)) {};
-
-	GENO_TYPE		nc, len, sen1, sen2, scc, rau, nai;
+	GENO_TYPE	nc, len, sen1, sen2, scc, rau, nai;
 } genotype_t;
 
 typedef struct particle_t
 {
-	particle_t(void) :	nc(dist_nc(rudi_)), len(dist_len(rudi_)),
-								sen1(dist_sen1(rudi_)), sen2(dist_sen2(rudi_)),
-								scc(dist_scc(rudi_)), rau(dist_rau(rudi_)),
-								nai(dist_nai(rudi_)) {};
-	double		pnc, plen, psen1, psen2, pscc, prau, pnai;
+	particle_t(void)
+	{
+		pnc = 0.0; plen = 0.0; psen1 = 0.0; sen2 =  0.0;
+		pscc = 0.0; rau = 0.0; pnai = 0.0;
 
-	double pos[NUMBER_ATTRIBUTES];
-	double vel[NUMBER_ATTRIBUTES];
+		vnc = 0.0; vlen = 0.0; vsen1 = 0.0; vsen2 = 0.0;
+		vscc = 0.0; vrau = 0.0; vnai = 0.0;
+	};
+	particle_t(bool randomized)
+	{
+		if (randomized)
+		{
+			pnc = dist_nc(rudi_);		plen = dist_len(rudi_);
+			psen1 = dist_sen1(rudi_);	sen2 = dist_sen2(rudi_);
+			pscc = dist_scc(rudi_);		rau = dist_rau(rudi_);
+			pnai = dist_nai(rudi_);
+
+			vnc = dist_velo(rudi_);		vlen = dist_velo(rudi_);
+			vsen1 = dist_velo(rudi_);	vsen2 = dist_velo(rudi_);
+			vscc = dist_velo(rudi_);	vrau = dist_velo(rudi_);
+			vnai = dist_velo(rudi_);
+		}
+		else
+		{
+			pnc = 0.0; plen = 0.0; psen1 = 0.0; sen2 =  0.0;
+			pscc = 0.0; rau = 0.0; pnai = 0.0;
+
+			vnc = 0.0; vlen = 0.0; vsen1 = 0.0; vsen2 = 0.0;
+			vscc = 0.0; vrau = 0.0; vnai = 0.0;
+		}
+	};
+	double		pnc, plen, psen1, psen2, pscc, prau, pnai;
+	double		vnc, vlen, vsen1, vsen2, vscc, vrau, vnai;
 } particle_t;
 
 typedef struct specimen_t
 {
-	specimen_t(void) : fit(0.0), gen(), calced(0), bf(0.0) {};
+	specimen_t(void) : fit(HORRIFIC_FITNESS_VALUE), gen(), calced(0), cc(true), bf(HORRIFIC_FITNESS_VALUE), bc(false) {};
 
 	FITNESS_TYPE	fit;
 	genotype_t		gen;
@@ -51,9 +74,7 @@ typedef struct specimen_t
 	particle_t		bc;
 } specimen_t;
 
-bool loci_comp (uint64_t i,uint64_t j) { return (i<=j); }
 bool spec_comp (specimen_t, specimen_t);
-bool spec_uniq (specimen_t, specimen_t);
 
 bool spec_comp (specimen_t i, specimen_t j)
 {
@@ -63,42 +84,22 @@ bool spec_comp (specimen_t i, specimen_t j)
 	return (i.fit<j.fit);	// minimize fitness value
 #endif
 }
-bool spec_uniq (specimen_t i, specimen_t j)
-{
-	if (i.gen.nc!=j.gen.nc)
-		return false;
-	if (i.gen.len!=j.gen.len)
-		return false;
-	if (i.gen.sen1!=j.gen.sen1)
-		return false;
-	if (i.gen.sen2!=j.gen.sen2)
-		return false;
-	if (i.gen.scc!=j.gen.scc)
-		return false;
-	if (i.gen.rau!=j.gen.rau)
-		return false;
-	if (i.gen.nai!=j.gen.nai)
-		return false;
-	return true;
-}
 
 
 class population
 {
 private:
 	specimen_t *pop_;
-	specimen_t *best_;
+	specimen_t best_in_swarm_;
 
 //	RNG_t *rudi_;
 	uint64_t pop_size_;
-	specimen_t best_in_swarm_;
 	uint64_t fitness_calculation_counter_;
 	uint64_t gen_limit_;
 
 	uint64_t msrt_;
 	uint64_t dnvt_;
 
-	particle_t min_, max_;
 	double cog_, soc_, inertia_;
 
 	uint64_t generation_;
@@ -106,11 +107,12 @@ private:
 
 //	GENO_TYPE discretize(particle_t);
 	void discretize(specimen_t&);
-	FITNESS_TYPE calcFitness(GENO_TYPE);
+	FITNESS_TYPE calcFitness(genotype_t);
 	specimen_t populate(void);
 
 public:
-	population(RNG *rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt);
+//	population(RNG *rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt);
+	population(uint64_t pop_size, double inertia, double cog, double soc, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt);
 	~population(void);
 	void populator(void);
 	void iterate(void);
@@ -120,30 +122,29 @@ public:
 	uint64_t Age(void) {return generation_;}
 };
 
-population::population(RNG *rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt)
+//population::population(RNG *rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt)
+population::population(uint64_t pop_size, double inertia, double cog, double soc, uint64_t gen_limit, uint64_t msrt, uint64_t dnvt)
 {
-	rudi_ = rudi;
+//	rudi_ = rudi;
 	pop_size_ = pop_size;
 	fitness_calculation_counter_ = 0;
 	gen_limit_ = gen_limit;
 
+	best_in_swarm_.fit = HORRIFIC_FITNESS_VALUE;
+
 	msrt_ = msrt;
 	dnvt_ = dnvt;
 
-	min_ = min_lim;
-	max_ = max_lim;
+	inertia_ = inertia;
 	cog_ = cog;
 	soc_ = soc;
-	inertia_ = inertia;
 
 	pop_ = new specimen_t[pop_size_];
-	best_ = new specimen_t[NUMBER_TRACKING];
 }
 
 population::~population(void)
 {
 	delete[] pop_;
-	delete[] best_;
 }
 
 void population::bestest(void)
@@ -219,15 +220,14 @@ void population::bestest(void)
 */
 
 	uint64_t iter=0;
-	best_[0].fit = HORRIFIC_FITNESS_VALUE;
 
 	for (iter=0; iter<pop_size_; iter++)
 	{
-		if (pop_[iter].fit > best_[0].fit)
-		{
-			best_[0] = pop_[iter];
-		}
-		if (pop_[iter].fit > best_in_swarm_.fit)
+#ifdef MAXIMIZING_FITNESS_VALUE
+		if (pop_[iter].fit > best_in_swarm_.fit)	// maximize fitness value
+#else
+		if (pop_[iter].fit < best_in_swarm_.fit)	// minimize fitness value
+#endif
 		{
 			best_in_swarm_ = pop_[iter];
 		}
@@ -249,11 +249,30 @@ void population::populator(void)
 	bestest();
 }
 
+specimen_t population::populate(void)
+{
+	specimen_t indi;
+
+//	uint64_t iter;
+
+//	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+//	{
+//		indi.cc.vel[iter] = rudi_.uniform((double)min_.vel[iter],(double)max_.vel[iter]);
+//		indi.cc.pos[iter] = rudi_.uniform((double)min_.pos[iter],(double)max_.pos[iter]);
+//	}
+
+//	indi.gen = discretize(indi.cc);
+	discretize(indi);
+	indi.fit = calcFitness(indi.gen);
+	indi.calced = fitness_calculation_counter_;
+	indi.bc = indi.cc;
+	indi.bf = indi.fit;
+	return indi;
+}
+
 void population::iterate(void)
 {
-//	GENO_TYPE kiddies[pop_size_];
-
-	// Check for lack of improvement in best particle (over 25 iterations, then stop processing)
+	// Check for lack of improvement in best particle
 	if (fitness_calculation_counter_ > (best_in_swarm_.calced + (pop_size_ * gen_limit_)) )
 		return;
 
@@ -261,23 +280,28 @@ void population::iterate(void)
 
 	for (iter=0; iter<pop_size_; iter++)
 	{
-		for (jter=0; jter<NUMBER_ATTRIBUTES; jter++)
-		{
-			pop_[iter].cc.vel[jter] =	(pop_[iter].cc.vel[jter] * inertia_)
-				+ ( (rudi_.uniform((double)0.0,(double)1.0) * cog_) * (pop_[iter].bc.pos[jter]     - pop_[iter].cc.pos[jter]) )
-				+ ( (rudi_.uniform((double)0.0,(double)1.0) * soc_) * (best_in_swarm_.cc.pos[jter] - pop_[iter].cc.pos[jter]) );
+//		pop_[iter].cc.vel[jter] =	(pop_[iter].cc.vel[jter] * inertia_)
+//			+ ( (rudi_.uniform((double)0.0,(double)1.0) * cog_) * (pop_[iter].bc.pos[jter]     - pop_[iter].cc.pos[jter]) )
+//			+ ( (rudi_.uniform((double)0.0,(double)1.0) * soc_) * (best_in_swarm_.cc.pos[jter] - pop_[iter].cc.pos[jter]) );
 
-//			pop_[iter].cc[jter].vel = (pop_[iter].cc[jter].vel * inertia_) + (pop_[iter].cc[jter].vel * cog_) + (best_in_swarm_[jter].vel * soc_);
-			if (pop_[iter].cc.vel[jter] > max_.vel[jter])
-				pop_[iter].cc.vel[jter] = max_.vel[jter];
-			else if (pop_[iter].cc.vel[jter] < min_.vel[jter])
-				pop_[iter].cc.vel[jter] = min_.vel[jter];
+		pop_[iter].cc.vnc =
+			(pop_[iter].cc.vnc * inertia_)
+			+ ( (rudi_.uniform((double)-1.0,(double)1.0) * cog_) * (pop_[iter].bc.pnc     - pop_[iter].cc.pnc) )
+			+ ( (rudi_.uniform((double)-1.0,(double)1.0) * soc_) * (best_in_swarm_.cc.pnc - pop_[iter].cc.pnc) );
 
-//			pop_[iter].cc.pos[jter] = pop_[iter].cc.pos[jter] + (pop_[iter].cc.vel[jter] * 1.0);//time__);
-//			if (pop_[iter].cc.pos[jter] > max_.pos[jter])
-//				pop_[iter].cc.pos[jter] = max_.pos[jter];
-//			else if (pop_[iter].cc.pos[jter] < min_.pos[jter])
-//				pop_[iter].cc.pos[jter] = min_.pos[jter];
+
+
+//		pop_[iter].cc[jter].vel = (pop_[iter].cc[jter].vel * inertia_) + (pop_[iter].cc[jter].vel * cog_) + (best_in_swarm_[jter].vel * soc_);
+		if (pop_[iter].cc.v > MAX_VELO)
+			pop_[iter].cc.v = MAX_VELO;
+		else if (pop_[iter].cc.v < MIN_VELO)
+			pop_[iter].cc.v = MIN_VELO;
+
+//		pop_[iter].cc.pos[jter] = pop_[iter].cc.pos[jter] + (pop_[iter].cc.vel[jter] * 1.0);//time__);
+//		if (pop_[iter].cc.pos[jter] > max_.pos[jter])
+//			pop_[iter].cc.pos[jter] = max_.pos[jter];
+//		else if (pop_[iter].cc.pos[jter] < min_.pos[jter])
+//			pop_[iter].cc.pos[jter] = min_.pos[jter];
 
 /*
 			// discretization
@@ -292,7 +316,6 @@ void population::iterate(void)
 				pop_[iter].gen[jter] = 0;
 			}
 */
-		}
 		discretize(pop_[iter]);
 //		pop_[iter].gen = discretize(pop_[iter].cc);
 		pop_[iter].fit = calcFitness(pop_[iter].gen);
@@ -310,50 +333,94 @@ void population::iterate(void)
 	bestest();
 }
 
-FITNESS_TYPE population::calcFitness(GENO_TYPE genie)
+FITNESS_TYPE population::calcFitness(genotype_t genie)
 {
-	FITNESS_TYPE temp = 0;
+	FITNESS_TYPE temp = 0.0;
 
-	FITNESS_TYPE x=0, y=0;
-	GENO_TYPE tfit ((1<<22)-1);
+/// Cardinality Term (minimize number of components in shopping list)
+	FITNESS_TYPE cardinality_term = 0.0;
+	cardinality_term = (FITNESS_TYPE) 50.0 / (
+		(
+			(genie.nc/42.0) +
+			(genie.len/9.0) +
+			(genie.sen1/168.0) +
+			(genie.sen2/56.0) +
+			(genie.scc/7.0) +
+			(genie.rau/92.0) +
+			(genie.nai/4.0)
+		) * 0.142857 );
 
-	tfit = tfit&genie;
-	x = (tfit.to_ulong() * 0.00004768372718899898) - 100.0;
-	tfit = genie>>22;
-	y = (tfit.to_ulong() * 0.00004768372718899898) - 100.0;
+/// Ratio of SEN1 to SEN2 (SEN2 are more expensive and less common)
+	FITNESS_TYPE sen_ratio = 0.0;
+	if (genie.sen1 > (3*genie.sen2))
+		sen_ratio = (FITNESS_TYPE) (3.0*genie.sen2)/genie.sen1;
+	else
+		sen_ratio = (FITNESS_TYPE) genie.sen1/(3.0*genie.sen2);
 
+/// Antenna Constraint Term
+	FITNESS_TYPE uhf_connectivity = 1.0;
 
-#ifdef MAXIMIZING_FITNESS_VALUE
-	temp = 0.5 + (  ( sin(sqrt(x*x+y*y))*sin(sqrt(x*x+y*y)) - 0.5 ) / ( (1.0 + 0.001*(x*x + y*y)) * (1.0 + 0.001*(x*x + y*y)) )  );
-#else
-	temp = HORRIFIC_FITNESS_VALUE;
-#endif
+	uint64_t ant_other = (genie.len*2) + (genie.sen1*1) + (genie.sen2*1) + (genie.rau*1) + (genie.nai*1);
+	uint64_t ant_total = genie.nc * 12;
+	uint64_t x = ( (genie.nc-1) % 4 ) + 1;
+	uint64_t y = (genie.nc-1) / 4;
+	uint64_t z = y + 1;
+	uint64_t ant_backbone = ( 32 * y ) - ( x * x ) + ( 13 * x );
+
+	uint64_t ant_needed = ant_total - ant_backbone + ant_other;
+
+	if ( (ant_total - ant_needed) > 12)
+		uhf_connectivity = (FITNESS_TYPE) ant_needed / (FITNESS_TYPE) ant_total;
+
+/// Mobile Subscriber Radiotelephone Terminal (supported by Radio via RAU)
+	uint64_t msrt_supported = (genie.rau*25);
+	FITNESS_TYPE msrt_ratio;
+	if (msrt_supported < msrt_)
+		msrt_ratio = 0.0;
+	else
+		msrt_ratio = (FITNESS_TYPE) msrt_ / (FITNESS_TYPE) msrt_supported;
+
+/// Digital Nonsecure Voice Terminal (supported by Wire via NC, LEN, SEN1, SEN2)
+	uint64_t dnvt_supported = (genie.nc*24) + (genie.len*176) + (genie.sen1*26) + (genie.sen2*41);
+	FITNESS_TYPE dnvt_ratio;
+	if (dnvt_supported < dnvt_)
+		dnvt_ratio = 0.0;
+	else
+		dnvt_ratio = (FITNESS_TYPE) dnvt_ / (FITNESS_TYPE) dnvt_supported;
+
+/// Minimum Constraints Term
+	uint64_t min_term = 1.0;
+	if (genie.nc == 0)
+		min_term = 0.0;
+	if (genie.scc == 0)
+		min_term = 0.0;
+
+/// Maximum Constraints Term
+	uint64_t max_term = 1.0;
+	if (genie.nc > (z*4))
+		max_term = 0.0;
+	if (genie.len > (z*1))
+		max_term = 0.0;
+	if (genie.sen1 > (z*12))
+		max_term = 0.0;
+	if (genie.sen2 > (z*4))
+		max_term = 0.0;
+	if (genie.scc > (z*1))
+		max_term = 0.0;
+	if (genie.rau > (z*9))
+		max_term = 0.0;
+	if (genie.nai > (z*1))
+		max_term = 0.0;
+
+/// Fitness
+	temp = cardinality_term * sen_ratio * uhf_connectivity * msrt_ratio * dnvt_ratio * min_term * max_term;
 
 	fitness_calculation_counter_++;
 
 	return temp;
 }
 
-specimen_t population::populate(void)
-{
-	specimen_t indi;
-	//indi.gen = rudi_.uniform(0, 1<<(NUMBER_ATTRIBUTES));
-	uint64_t iter;
 
-	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
-	{
-		indi.cc.vel[iter] = rudi_.uniform((double)min_.vel[iter],(double)max_.vel[iter]);
-		indi.cc.pos[iter] = rudi_.uniform((double)min_.pos[iter],(double)max_.pos[iter]);
-	}
-
-//	indi.gen = discretize(indi.cc);
-	discretize(indi);
-	indi.fit = calcFitness(indi.gen);
-	indi.calced = fitness_calculation_counter_;
-	indi.bc = indi.cc;
-	indi.bf = indi.fit;
-	return indi;
-}
 
 /*
 GENO_TYPE population::discretize(particle_t par)
@@ -373,20 +440,16 @@ GENO_TYPE population::discretize(particle_t par)
 */
 void population::discretize(specimen_t& par)
 {
-	GENO_TYPE genie;
-	uint64_t iter;
-	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+	par.cc.pnc =
+	if ( rudi_.uniform((double)0.0,(double)1.0) < (double)( 1.0/ (1.0+exp(par.cc.vel[iter] * -1.0)) ) )
 	{
-		if ( rudi_.uniform((double)0.0,(double)1.0) < (double)( 1.0/ (1.0+exp(par.cc.vel[iter] * -1.0)) ) )
-		{
-			par.cc.pos[iter] = 1.0;
-			par.gen[iter] = 1;
-		}
-		else
-		{
-			par.cc.pos[iter] = 0.0;
-			par.gen[iter] = 0;
-		}
+		par.cc.pos[iter] = 1.0;
+		par.gen[iter] = 1;
+	}
+	else
+	{
+		par.cc.pos[iter] = 0.0;
+		par.gen[iter] = 0;
 	}
 }
 
@@ -401,10 +464,14 @@ int main(int argc, char* argv[])
 	uint64_t num_trials = NUMBER_TRIALS;
 	uint64_t num_gens = NUMBER_GENERATIONS;
 	uint64_t gen_limit = NUMBER_GENERATIONS/10;
+	uint64_t msrt = 100;
+	uint64_t dnvt = 100;
 
 	double last_tick_count = 0.0;
 
-	string outname = "./outfile_shafer-pso_best.csv";
+	string out_filename = "";
+
+	stringstream strstr (stringstream::in | stringstream::out);
 
     try
     {
@@ -417,6 +484,8 @@ int main(int argc, char* argv[])
 			("soc",		po::value<double>(),		"Set Social effect of swarm")
 			("trials",	po::value<uint64_t>(),		"Set Number of Trials")
 			("gens",	po::value<uint64_t>(),		"Set Number of Generations")
+			("msrt",	po::value<uint64_t>(),		"Set Number of MSRT")
+			("dnvt",	po::value<uint64_t>(),		"Set Number of DNVT")
 		;
 
 		po::variables_map vm;
@@ -493,6 +562,26 @@ int main(int argc, char* argv[])
 			cout << "Number of Trials was set to default of " << num_gens << ".\n";
 		}
 
+		if (vm.count("msrt"))
+		{
+			msrt = vm["msrt"].as<uint64_t>();
+			cout << "Number of MSRT was set to " << msrt << ".\n";
+		}
+		else
+		{
+			cout << "Number of MSRT was set to default of " << msrt << ".\n";
+		}
+
+		if (vm.count("dnvt"))
+		{
+			dnvt = vm["dnvt"].as<uint64_t>();
+			cout << "Number of DNVT was set to " << dnvt << ".\n";
+		}
+		else
+		{
+			cout << "Number of DNVT was set to default of " << dnvt << ".\n";
+		}
+
 	}
 	catch(std::exception& e)
 	{
@@ -506,69 +595,44 @@ int main(int argc, char* argv[])
 	}
 
 
-//	RNG randi (rng_seed);
 
-	uint64_t iter;//, jter;
-	particle_t mini, maxi;
-
-	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+	if (out_filename.length() < 4)
 	{
-		mini.pos[iter] = 0.0;
-		maxi.pos[iter] = 1.0;
-
-		mini.vel[iter] = -4.0;
-		maxi.vel[iter] = 4.0;
+		strstr.clear();	strstr.str("");
+		strstr << "./pso_mse_" << msrt << "_" << dnvt << ".csv";
+		out_filename = strstr.str();
 	}
 
 
 	// Print data to file
-//	stringstream strstr (stringstream::in | stringstream::out);
-
 	ofstream outfileTheBest;
-	outfileTheBest.open( outname.c_str(), std::ofstream::out | std::ofstream::app );
+	outfileTheBest.open( out_filename.c_str(), std::ofstream::out | std::ofstream::app );
 
 	if ( !outfileTheBest.is_open() )
 	{
-		cerr << "Unable to open file: " << outname << "\n";
-		return 1;
-	}
-/*
-	ofstream outfileBestGenLog;
-	outfileBestGenLog.open( "./outfile_shafer-pso_gen_log.csv", std::ofstream::out | std::ofstream::app );
-
-	if ( !outfileBestGenLog.is_open() )
-	{
-		cerr << "Unable to open file: " << "./outfile_shafer-pso_gen_log.csv" << "\n";
+		cerr << "Unable to open file: " << out_filename << "\n";
 		return 1;
 	}
 
-	ofstream outfileBestFitLog;
-	outfileBestFitLog.open( "./outfile_shafer-pso_fit_log.csv", std::ofstream::out | std::ofstream::app );
-
-	if ( !outfileBestFitLog.is_open() )
-	{
-		cerr << "Unable to open file: " << "./outfile_shafer-pso_fit_log.csv" << "\n";
-		return 1;
-	}
-*/
-
-	uint64_t best_default_precision = outfileTheBest.precision();
-//	outfileTheBest.precision(35);
-
-	outfileTheBest << "NumGens,PopSize,RNG_Seed,Trial,FitEvals,EndGen,Genotype,Fitness";
+	outfileTheBest << "NumGens,PopSize,Inertia,SOC,COG,RNG_Seed,Trial,FitEvals,EndGen,NC,LEN,SEN1,SEN2,SCC,RAU,NAI,Fitness";
 
 	population *hoponpop;
 
-	last_tick_count = (double) getTickCount();
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	last_tick_count = (double) (ts.tv_sec) + (double)(ts.tv_nsec/1000000000.0);
 
 	uint64_t trailer_trash;
 	for (trailer_trash=0; trailer_trash<num_trials; trailer_trash++)
 	{
-		uint64_t rng_seed = getTickCount();
-		RNG randi (rng_seed);
+		clock_gettime(CLOCK_REALTIME, &ts);
+		uint64_t rng_seed = (ts.tv_sec*1000000000) + ts.tv_nsec;
+
+		rudi_.seed(rng_seed);
 
 	// population(RNG& rudi, uint64_t pop_size, particle_t min_lim, particle_t max_lim, double cog, double soc, double inertia, uint64_t gen_limit);
-		hoponpop = new population(randi, pop_size, mini, maxi, cog_r, soc_r, inertia_r, gen_limit);
+//		hoponpop = new population(randi, pop_size, mini, maxi, cog_r, soc_r, inertia_r, gen_limit);
+		hoponpop = new population(pop_size, inertia_r, cog_r, soc_r, gen_limit, msrt, dnvt);
 
 //		cout << "Trial: " << trailer_trash << endl;
 		if (trailer_trash==0)
