@@ -333,6 +333,40 @@ void population::iterate(void)
 	bestest();
 }
 
+
+/*
+GENO_TYPE population::discretize(particle_t par)
+{
+	GENO_TYPE genie;
+	uint64_t iter;
+	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
+	{
+//		if (par.pos[iter] > 0.5)
+//		if ( rudi_.uniform((double)0.0,(double)1.0) < (double)( 1.0/ (1.0+exp(par.cc.vel[jter] * -1.0)) ) )
+			genie[iter] = 1;
+		else
+			genie[iter] = 0;
+	}
+	return genie;
+}
+*/
+void population::discretize(specimen_t& par)
+{
+	par.cc.pnc =
+	if ( rudi_.uniform((double)0.0,(double)1.0) < (double)( 1.0/ (1.0+exp(par.cc.vel[iter] * -1.0)) ) )
+	{
+		par.cc.pos[iter] = 1.0;
+		par.gen[iter] = 1;
+	}
+	else
+	{
+		par.cc.pos[iter] = 0.0;
+		par.gen[iter] = 0;
+	}
+}
+
+
+
 FITNESS_TYPE population::calcFitness(genotype_t genie)
 {
 	FITNESS_TYPE temp = 0.0;
@@ -421,37 +455,6 @@ FITNESS_TYPE population::calcFitness(genotype_t genie)
 }
 
 
-
-/*
-GENO_TYPE population::discretize(particle_t par)
-{
-	GENO_TYPE genie;
-	uint64_t iter;
-	for (iter=0; iter<NUMBER_ATTRIBUTES; iter++)
-	{
-//		if (par.pos[iter] > 0.5)
-//		if ( rudi_.uniform((double)0.0,(double)1.0) < (double)( 1.0/ (1.0+exp(par.cc.vel[jter] * -1.0)) ) )
-			genie[iter] = 1;
-		else
-			genie[iter] = 0;
-	}
-	return genie;
-}
-*/
-void population::discretize(specimen_t& par)
-{
-	par.cc.pnc =
-	if ( rudi_.uniform((double)0.0,(double)1.0) < (double)( 1.0/ (1.0+exp(par.cc.vel[iter] * -1.0)) ) )
-	{
-		par.cc.pos[iter] = 1.0;
-		par.gen[iter] = 1;
-	}
-	else
-	{
-		par.cc.pos[iter] = 0.0;
-		par.gen[iter] = 0;
-	}
-}
 
 int main(int argc, char* argv[])
 {
